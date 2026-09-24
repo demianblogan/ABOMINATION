@@ -41,5 +41,25 @@
       "configurePreset": "windows-msvc",
       "configuration": "Release"
     }
+  ],
+  "testPresets": [
+    {
+      "name": "debug",
+      "displayName": "Debug",
+      "configurePreset": "windows-msvc",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release",
+      "configurePreset": "windows-msvc",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
   ]
 }

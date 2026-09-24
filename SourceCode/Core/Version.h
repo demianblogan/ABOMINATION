@@ -13,9 +13,9 @@ namespace Abomination::Core
         bool operator==(const Version&) const = default;
     };
 
-    /// Version of the game, taken from project(... VERSION ...) in CMakeLists.txt.
-    [[nodiscard]] Version GameVersion() noexcept;
+    // Version of the game, taken from project(... VERSION ...) in CMakeLists.txt.
+    [[nodiscard]] Version GetGameVersion() noexcept;
 
-    /// The same version as text: "MAJOR.MINOR.PATCH".
-    [[nodiscard]] std::string_view GameVersionString() noexcept;
-} // namespace Abomination::Core
+    // The same version as text: "MAJOR.MINOR.PATCH".
+    [[nodiscard]] std::string_view GetGameVersionString() noexcept;
+}

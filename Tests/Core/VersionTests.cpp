@@ -9,12 +9,11 @@ namespace Abomination::Core
 {
     TEST(Version, StringMatchesComponents)
     {
-        const Version version = GameVersion();
+        const Version version = GetGameVersion();
 
-        const std::string expected =
-            std::format("{}.{}.{}", version.major, version.minor, version.patch);
+        const std::string expected = std::format("{}.{}.{}", version.major, version.minor, version.patch);
 
-        EXPECT_EQ(GameVersionString(), expected);
+        EXPECT_EQ(GetGameVersionString(), expected);
     }
 
     TEST(Version, EqualWhenAllComponentsAreEqual)
@@ -26,4 +25,4 @@ namespace Abomination::Core
         EXPECT_EQ(first, same);
         EXPECT_NE(first, otherPatch);
     }
-} // namespace Abomination::Core
+}

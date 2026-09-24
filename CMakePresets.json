@@ -15,10 +15,11 @@
         "value": "x64",
         "strategy": "set"
       },
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "binaryDir": "${sourceDir}/Build/${presetName}",
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
-        "VCPKG_TARGET_TRIPLET": "x64-windows-static-md"
+        "VCPKG_TARGET_TRIPLET": "x64-windows-static-md",
+        "CMAKE_CONFIGURATION_TYPES": "Debug;Release"
       },
       "condition": {
         "type": "equals",

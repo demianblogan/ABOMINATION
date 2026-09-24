@@ -1,6 +1,5 @@
 # --- Build output ---
-/build/
-/out/
+/Build/
 
 # --- vcpkg (manifest mode installs next to the build) ---
 /vcpkg_installed/

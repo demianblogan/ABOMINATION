@@ -2,7 +2,7 @@
 
 #include "Core/Log.h"
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 #include <string_view>
 

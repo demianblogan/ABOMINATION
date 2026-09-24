@@ -170,9 +170,9 @@ namespace Abomination::Platform
         m_window = nullptr;
     }
 
-    void* GetOpenGLFunctionAddress(const char* name)
+    OpenGLFunction GetOpenGLFunctionAddress(const char* name)
     {
-        // SDL returns a function pointer; glad expects void*. On Windows both have the same size and representation.
-        return reinterpret_cast<void*>(SDL_GL_GetProcAddress(name));
+        // SDL_FunctionPointer is the same type as OpenGLFunction, so no conversion is needed.
+        return SDL_GL_GetProcAddress(name);
     }
 }

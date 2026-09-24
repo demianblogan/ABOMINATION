@@ -54,7 +54,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ env.VCPKG_BINARY_CACHE_DIR }}
-          key: vcpkg-${{ runner.os }}-${{ matrix.configuration }}-${{ hashFiles('vcpkg.json', 'VcpkgTriplets/**') }}
+          key: vcpkg-${{ runner.os }}-${{ matrix.configuration }}-${{ hashFiles('vcpkg.json') }}
           restore-keys: |
             vcpkg-${{ runner.os }}-${{ matrix.configuration }}-
 

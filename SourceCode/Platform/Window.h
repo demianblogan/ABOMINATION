@@ -59,7 +59,11 @@ namespace Abomination::Platform
         int m_heightInPixels = 0;
     };
 
+    // A pointer to a function without parameters and return value. OpenGL functions have different signatures,
+    // so the address is returned in this general form and GLAD casts it to the real type of each function.
+    using OpenGLFunction = void (*)();
+
     // Asks the graphics driver for the address of an OpenGL function by its name ("glClear", ...).
     // Requires a current OpenGL context. Returns nullptr if the driver does not provide the function.
-    [[nodiscard]] void* GetOpenGLFunctionAddress(const char* name);
+    [[nodiscard]] OpenGLFunction GetOpenGLFunctionAddress(const char* name);
 }

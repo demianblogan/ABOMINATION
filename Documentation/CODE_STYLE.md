@@ -31,6 +31,10 @@ found during review.
 - One main type per header. Small helper types that belong to it may live in
   the same file.
 - Headers use `#pragma once`.
+- **Headers contain only declarations; definitions go to the `.cpp`**, even
+  for trivial one-line functions such as getters. Exceptions: templates and
+  `constexpr` functions (the compiler must see their bodies), and `= default` /
+  `= delete`, which are not bodies.
 
 ## 3. Naming
 
@@ -48,7 +52,8 @@ found during review.
 
 - **Abbreviations are always written in capitals**, in every kind of name,
   including local variables: `GLBuffer`, `LoadJSON()`, `HUDLayer`,
-  `m_entityID`, `playerHUD`, `JSONText`, `ID`.
+  `m_entityID`, `playerHUD`, `JSONText`, `ID`, `SDLLibrary` (a local
+  variable), `m_SDLLibrary`.
 - **Booleans** (variables, members, parameters and constants) follow one of
   three patterns depending on what they mean:
 
@@ -68,6 +73,9 @@ found during review.
 - No Hungarian notation (`iCount`, `pData`, `strName`).
 - The root namespace is `Abomination`. Every module has a nested namespace
   matching its folder: `SourceCode/Renderer/` → `Abomination::Renderer`.
+  The only exception is the class `Application` (folder `Application/`), which
+  lives in the root namespace `Abomination` to avoid
+  `Abomination::Application::Application`.
 - Implementation details that must be visible in a header (for example,
   functions called by a template) go into a nested `Internal` namespace and
   are not called from outside the module. Details that do not need to be in a
@@ -87,8 +95,13 @@ Handled by clang-format. The main choices:
 - Pointer and reference bind to the type: `int* ptr`, `const Mesh& mesh`.
 - `if`/`for`/`while` with a **single statement** have no braces; with two or
   more statements braces are required.
+- An **empty function body** is written as `{}` on its own line under the
+  signature (or under the constructor initializer list).
+- In a class declaration, the groups *copy operations*, *move operations* and
+  *destructor* are separated by blank lines.
 
 ```cpp
+// ShaderProgram.h
 namespace Abomination::Renderer
 {
     class ShaderProgram
@@ -96,19 +109,42 @@ namespace Abomination::Renderer
     public:
         explicit ShaderProgram(std::uint32_t programID) noexcept;
 
-        [[nodiscard]] std::uint32_t GetProgramID() const noexcept { return m_programID; }
+        ShaderProgram(const ShaderProgram&) = delete;
+        ShaderProgram& operator=(const ShaderProgram&) = delete;
 
-        void Bind() const
-        {
-            if (m_programID == 0)
-                return;
+        ShaderProgram(ShaderProgram&& other) noexcept;
+        ShaderProgram& operator=(ShaderProgram&& other) noexcept;
 
-            glUseProgram(m_programID);
-        }
+        ~ShaderProgram();
+
+        [[nodiscard]] std::uint32_t GetProgramID() const noexcept;
+
+        void Bind() const;
 
     private:
         std::uint32_t m_programID = 0;
     };
+}
+
+// ShaderProgram.cpp
+namespace Abomination::Renderer
+{
+    ShaderProgram::ShaderProgram(std::uint32_t programID) noexcept
+        : m_programID(programID)
+    {}
+
+    std::uint32_t ShaderProgram::GetProgramID() const noexcept
+    {
+        return m_programID;
+    }
+
+    void ShaderProgram::Bind() const
+    {
+        if (m_programID == 0)
+            return;
+
+        glUseProgram(m_programID);
+    }
 }
 ```
 

@@ -51,6 +51,21 @@ Abomination/
 All code lives in the static library so that the tests link exactly the same
 code the game runs. The executable is just an entry point.
 
+**Build pipeline**
+
+- `vcpkg.json` lists the libraries; `builtin-baseline` pins their versions.
+- `CMakePresets.json` holds the whole configuration: Visual Studio 2026
+  generator, x64, vcpkg toolchain, triplet `x64-windows-static-md` (libraries
+  are linked statically into the executable, the C++ runtime dynamically).
+- `CMake/CompilerOptions.cmake` applies `/W4 /WX /permissive- /utf-8 …` to
+  every target of ours; third-party headers produce no warnings.
+- The version exists only in `project(... VERSION ...)`; CMake generates
+  `Core/Version.cpp` from it.
+- CI (`.github/workflows/CI.yml`) builds Debug and Release and runs all tests
+  for every pull request and every push to `main`.
+
+See [BUILDING.md](BUILDING.md) for instructions.
+
 ## 4. Modules
 
 Each module is a folder in `SourceCode/` and a namespace in `Abomination::`.

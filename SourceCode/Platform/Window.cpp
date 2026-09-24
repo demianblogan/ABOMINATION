@@ -4,6 +4,8 @@
 #include "Core/Log.h"
 
 #include <SDL3/SDL.h>
+#include <imgui.h>
+#include <imgui_impl_sdl3.h>
 
 #include <format>
 #include <utility>
@@ -113,6 +115,11 @@ namespace Abomination::Platform
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
+            // ImGui sees every event first: it needs the mouse and keyboard for its windows.
+            // Without an ImGui context (the debug overlay is not created) there is nobody to pass them to.
+            if (ImGui::GetCurrentContext() != nullptr)
+                ImGui_ImplSDL3_ProcessEvent(&event);
+
             switch (event.type)
             {
                 // The user closes the last window (the close button, Alt+F4).
@@ -152,6 +159,16 @@ namespace Abomination::Platform
     int Window::GetHeightInPixels() const noexcept
     {
         return m_heightInPixels;
+    }
+
+    SDL_Window* Window::GetSDLWindow() const noexcept
+    {
+        return m_window;
+    }
+
+    SDL_GLContextState* Window::GetSDLContext() const noexcept
+    {
+        return m_context;
     }
 
     void Window::Destroy() noexcept

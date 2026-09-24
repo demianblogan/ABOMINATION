@@ -56,12 +56,17 @@ namespace Abomination
         if constexpr (Core::IsDebugBuild)
             Renderer::EnableDebugOutput();
 
-        return Application(std::move(*SDLLibrary), std::move(*window));
+        std::expected<UI::DebugOverlay, std::string> debugOverlay = UI::DebugOverlay::Create(*window);
+        if (!debugOverlay.has_value())
+            return std::unexpected(debugOverlay.error());
+
+        return Application(std::move(*SDLLibrary), std::move(*window), std::move(*debugOverlay));
     }
 
-    Application::Application(Platform::SDLLibrary SDLLibrary, Platform::Window window) noexcept
+    Application::Application(Platform::SDLLibrary SDLLibrary, Platform::Window window, UI::DebugOverlay debugOverlay) noexcept
         : m_SDLLibrary(std::move(SDLLibrary))
         , m_window(std::move(window))
+        , m_debugOverlay(std::move(debugOverlay))
     {}
 
     int Application::Run()
@@ -79,6 +84,9 @@ namespace Abomination
 
             Renderer::SetViewport(m_window.GetWidthInPixels(), m_window.GetHeightInPixels());
             Renderer::ClearFrame(CalculateBackgroundColor(frameTimer.GetTotalTime()));
+
+            // The overlay is drawn last, on top of the game.
+            m_debugOverlay.Draw();
 
             m_window.SwapBuffers();
         }

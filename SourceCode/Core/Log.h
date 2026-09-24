@@ -24,6 +24,7 @@ namespace Abomination::Core
         Core,
         Platform,
         Renderer,
+        UI,
     };
 
     struct LogSettings

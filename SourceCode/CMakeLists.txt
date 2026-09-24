@@ -1,5 +1,6 @@
 # --- Dependencies ------------------------------------------------------------
 find_package(glm CONFIG REQUIRED)
+find_package(imgui CONFIG REQUIRED)
 find_package(SDL3 CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 
@@ -23,6 +24,8 @@ set(LIBRARY_SOURCES
     Core/Version.h
     Core/Version.cpp.in
 
+    Platform/ImGuiPlatformBackend.h
+    Platform/ImGuiPlatformBackend.cpp
     Platform/SDLLibrary.h
     Platform/SDLLibrary.cpp
     Platform/SystemServices.h
@@ -32,10 +35,17 @@ set(LIBRARY_SOURCES
 
     Renderer/DebugOutput.h
     Renderer/DebugOutput.cpp
+    Renderer/ImGuiRendererBackend.h
+    Renderer/ImGuiRendererBackend.cpp
     Renderer/OpenGLLoader.h
     Renderer/OpenGLLoader.cpp
     Renderer/RenderCommands.h
     Renderer/RenderCommands.cpp
+
+    UI/DebugOverlay.h
+    UI/DebugOverlay.cpp
+    UI/ImGuiLibrary.h
+    UI/ImGuiLibrary.cpp
 )
 
 add_library(AbominationCore STATIC
@@ -48,6 +58,7 @@ target_link_libraries(AbominationCore
         glm::glm-header-only  # Renderer headers use glm types, so everyone who uses the library needs glm too
     PRIVATE
         GLAD                  # Only Renderer/*.cpp include GLAD, no header does
+        imgui::imgui          # Only .cpp files include ImGui, no header does
         SDL3::SDL3            # Only Platform/*.cpp include SDL, no header does
         spdlog::spdlog        # Only Log.cpp includes spdlog, Log.h does not
 )

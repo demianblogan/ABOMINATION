@@ -47,6 +47,11 @@ namespace Abomination::Platform
         [[nodiscard]] int GetWidthInPixels() const noexcept;
         [[nodiscard]] int GetHeightInPixels() const noexcept;
 
+        // The SDL handles of the window and its OpenGL context, for other Platform classes (ImGuiPlatformBackend).
+        // Code outside Platform cannot use them: SDL types are only declared there, never defined.
+        [[nodiscard]] SDL_Window* GetSDLWindow() const noexcept;
+        [[nodiscard]] SDL_GLContextState* GetSDLContext() const noexcept;
+
     private:
         Window(SDL_Window* window, SDL_GLContextState* context, int widthInPixels, int heightInPixels) noexcept;
 

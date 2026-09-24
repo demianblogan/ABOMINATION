@@ -95,6 +95,10 @@ Handled by clang-format. The main choices:
 - Pointer and reference bind to the type: `int* ptr`, `const Mesh& mesh`.
 - `if`/`for`/`while` with a **single statement** have no braces; with two or
   more statements braces are required.
+- A `return` that follows other statements in the same block is separated
+  from them by a blank line (a comment that belongs to the `return` stays
+  directly above it). A `return` that is the only statement of its block has
+  no blank line.
 - An **empty function body** is written as `{}` on its own line under the
   signature (or under the constructor initializer list).
 - In a class declaration, the groups *copy operations*, *move operations* and

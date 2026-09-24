@@ -45,6 +45,7 @@ namespace Abomination::Core::Log
                 case LogCategory::Renderer:
                     return "Renderer";
             }
+
             return "Unknown";
         }
 
@@ -65,6 +66,7 @@ namespace Abomination::Core::Log
                 case LogLevel::Critical:
                     return spdlog::level::critical;
             }
+
             return spdlog::level::info;
         }
 
@@ -133,6 +135,7 @@ namespace Abomination::Core::Log
         {
             // All loggers have the same minimum level, so any of them can answer.
             const spdlog::logger* logger = GetLogger(LogCategory::Core);
+
             return logger != nullptr && logger->should_log(ConvertToSPDLogLevel(level));
         }
 

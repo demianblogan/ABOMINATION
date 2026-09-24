@@ -24,6 +24,7 @@ namespace Abomination::Platform
 
         SDLLibrary library;
         library.m_isActive = true;
+
         return library;
     }
 
@@ -40,6 +41,7 @@ namespace Abomination::Platform
 
             m_isActive = std::exchange(other.m_isActive, false);
         }
+
         return *this;
     }
 

@@ -42,6 +42,7 @@ namespace Abomination::Core
             std::ifstream file(m_logFilePath);
             std::stringstream contents;
             contents << file.rdbuf();
+
             return contents.str();
         }
 

@@ -21,3 +21,8 @@ indent_size = 2
 [*.md]
 # Two trailing spaces are a line break in Markdown.
 trim_trailing_whitespace = false
+
+[ThirdParty/**]
+# Third-party files are kept exactly as they were delivered.
+trim_trailing_whitespace = false
+insert_final_newline = unset

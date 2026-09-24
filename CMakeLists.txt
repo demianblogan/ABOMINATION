@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.31)
 project(Abomination
     VERSION 0.1.0
     DESCRIPTION "A retro first-person shooter inspired by Quake (1996)"
-    LANGUAGES CXX
+    LANGUAGES C CXX  # C: the generated GLAD loader is written in C
 )
 
 if(NOT MSVC)
@@ -24,6 +24,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Binaries)
 include(CMake/CompilerOptions.cmake)
 
 # --- Targets -----------------------------------------------------------------
+add_subdirectory(ThirdParty/GLAD)
 add_subdirectory(SourceCode)
 
 # --- Tests -------------------------------------------------------------------

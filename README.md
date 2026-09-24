@@ -83,6 +83,7 @@ the enemy AI — is built to be read and learned from.
 | Architecture    | ECS with EnTT                                                              |
 | Math            | glm                                                                        |
 | Logging         | spdlog                                                                     |
+| Debug tools     | Dear ImGui                                                                 |
 | Levels          | TrenchBroom + own level compiler                                           |
 | Build           | CMake · vcpkg · GitHub Actions                                             |
 | Testing         | GoogleTest · CTest                                                         |

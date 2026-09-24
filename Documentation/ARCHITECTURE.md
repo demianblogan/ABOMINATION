@@ -35,6 +35,7 @@ Abomination/
 ├── SourceCode/         Game source code, one folder per module
 ├── Tests/              GoogleTest unit tests, mirrors SourceCode/
 ├── Tools/              Helper tools (level compiler, TrenchBroom config) — Planned
+├── ThirdParty/         Third-party code not available in vcpkg (GLAD)
 ├── CMakeLists.txt
 ├── CMakePresets.json
 └── vcpkg.json
@@ -57,6 +58,13 @@ code the game runs. The executable is just an entry point.
 - `CMakePresets.json` holds the whole configuration: Visual Studio 2026
   generator, x64, vcpkg toolchain, triplet `x64-windows-static-md` (libraries
   are linked statically into the executable, the C++ runtime dynamically).
+- Code that is not available in vcpkg lives in `ThirdParty/`, each library
+  with its own small CMake target. Its formatting and names are not changed
+  (`ThirdParty/.clang-format` disables formatting).
+  - `ThirdParty/GLAD` — GLAD 2 loader generated for OpenGL 4.6 **Core**
+    without extensions: functions removed from modern OpenGL (`glBegin`, …)
+    are not even declared. vcpkg has only the old GLAD 1. The generation
+    settings are written at the top of `include/glad/gl.h`.
 - `CMake/CompilerOptions.cmake` applies `/W4 /WX /permissive- /utf-8 …` to
   every target of ours; third-party headers produce no warnings.
 - The version exists only in `project(... VERSION ...)`; CMake generates
@@ -112,8 +120,38 @@ A module may depend only on modules **below** it in this diagram.
   backend. The boundary is the renderer's high-level API instead.
 - The engine and game layers are not split into separate libraries yet.
   The one-directional dependency rule keeps that possible later.
+- Headers of `Platform` and `Renderer` do not include SDL or GLAD: SDL types
+  are only forward-declared, so the libraries stay private to their module
+  (linked `PRIVATE` in CMake). glm is the exception: it is a math library
+  used in interfaces everywhere, so it is linked `PUBLIC`.
+
+**Startup order** (`Main.cpp` → `Application::Create`)
+
+1. Logging starts; the log file is written next to the executable.
+2. `Platform::SDLLibrary` initializes SDL.
+3. `Platform::Window` creates the window and the OpenGL 4.6 Core context
+   (a debug context in Debug builds).
+4. `Renderer::LoadOpenGLFunctions` loads the OpenGL functions through GLAD and
+   checks that 4.6 is available.
+5. In Debug builds `Renderer::EnableDebugOutput` routes driver messages to the
+   log.
+
+Objects that own resources are created by a static `Create()` /
+`Initialize()` returning `std::expected<Object, std::string>`, because a
+constructor cannot report an error without exceptions. They are move-only.
+A fatal startup error is logged and shown in an error dialog.
+
+Shutdown happens in reverse order through destructors; the application is
+destroyed before logging stops, so the shutdown is recorded.
 
 ## 5. Main loop — Planned (0.2)
+
+**Now (0.1):** one iteration is one frame: `FrameTimer` measures the frame
+time (monotonic clock, frames longer than 0.25 s are clamped), then events
+are processed, the viewport is set to the window size, the frame is drawn and
+the buffers are swapped (waiting for the monitor when V-Sync is on).
+
+**Planned:**
 
 Gameplay and physics run at a **fixed timestep**; rendering runs as fast as
 allowed (or at the V-Sync / FPS limit) and **interpolates** between the last
@@ -132,6 +170,10 @@ Render(alpha)                             // interpolate between states
 Why: movement and physics behave identically at 30 and 300 FPS, jump height
 does not depend on frame rate, and simulation is deterministic enough for
 tests. In 0.1 the fly camera uses a simple variable timestep.
+
+Camera rotation from the mouse is applied **every rendered frame**, not in the
+fixed step, so looking around never lags behind the display. Movement of the
+player's body happens in the fixed step using the current view direction.
 
 ## 6. Renderer
 
@@ -152,7 +194,15 @@ Inside the renderer:
   destructor calls `glDelete*`.
 - **Direct State Access** everywhere (OpenGL 4.5+).
 - **Debug output** (`GL_KHR_debug`) enabled in Debug builds, routed to the
-  logger.
+  logger. It is synchronous, so a breakpoint in the callback shows the
+  offending call in the call stack.
+
+**Now (0.1):** `LoadOpenGLFunctions`, `EnableDebugOutput`, and the frame
+commands `SetViewport` / `ClearFrame`.
+
+The executable exports `NvOptimusEnablement` and
+`AmdPowerXpressRequestHighPerformance`, so laptops with hybrid graphics run
+the game on the discrete GPU.
 
 ## 7. ECS — Planned (0.2)
 

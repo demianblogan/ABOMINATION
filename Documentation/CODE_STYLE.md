@@ -28,6 +28,10 @@ found during review.
 - **Folders use full words, not industry abbreviations**: `SourceCode`, not
   `src`; `Documentation`, not `docs`; `Binaries`, not `bin`. Readability comes
   first. The only exceptions are names fixed by tools: `.github/`.
+- **Code in `ThirdParty/` is not ours** and does not follow this guide: its
+  file names, formatting and identifiers stay exactly as delivered, so it can
+  be replaced by a newer version at any time. Only the folder names follow our
+  rules (`ThirdParty/GLAD`).
 - One main type per header. Small helper types that belong to it may live in
   the same file.
 - Headers use `#pragma once`.

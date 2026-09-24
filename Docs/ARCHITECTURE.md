@@ -1,0 +1,173 @@
+# Architecture
+
+> **Draft.** This document describes the architecture as it is *now* and the
+> direction it is meant to grow in. Sections marked **Planned** do not exist in
+> code yet. The document is updated whenever the architecture changes.
+
+## 1. Goals
+
+1. **Readable.** The code is a learning resource first: every system should be
+   understandable on its own.
+2. **Clear boundaries.** Modules depend on each other in one direction only.
+3. **Data-driven.** Gameplay numbers live in data files, not in code.
+4. **Testable.** Logic is separated from OpenGL, SDL and files so it can be
+   unit-tested without a window.
+5. **Grows with need.** No speculative abstractions (YAGNI). When a need
+   appears, the architecture is improved immediately.
+
+## 2. Repository layout
+
+```
+Abomination/
+├── .github/            GitHub: PR template, CI workflows (name fixed by GitHub)
+├── Assets/             Runtime data, copied next to the executable
+│   ├── Configs/        JSON: settings defaults, weapons, enemies, …
+│   ├── Maps/           TrenchBroom .map files and compiled levels
+│   ├── Models/         glTF models (.glb)
+│   ├── Shaders/        GLSL sources
+│   ├── Sounds/
+│   ├── Music/
+│   ├── Textures/
+│   └── Localization/   Text for en, es, de, ru, uk
+├── Docs/               Project documentation
+├── Source/             Game source code, one folder per module
+├── Tests/              GoogleTest unit tests, mirrors Source/
+├── Tools/              Helper tools (level compiler, TrenchBroom config) — Planned
+├── CMakeLists.txt
+├── CMakePresets.json
+└── vcpkg.json
+```
+
+## 3. Build targets
+
+| Target             | Type           | Content                                              |
+|--------------------|----------------|------------------------------------------------------|
+| `AbominationCore`  | static library | All modules from `Source/` except `Main.cpp`         |
+| `Abomination`      | executable     | `Main.cpp` only: creates and runs the application    |
+| `AbominationTests` | executable     | Tests from `Tests/`, linked against `AbominationCore`|
+
+All code lives in the static library so that the tests link exactly the same
+code the game runs. The executable is just an entry point.
+
+## 4. Modules
+
+Each module is a folder in `Source/` and a namespace in `Abomination::`.
+A module may depend only on modules **below** it in this diagram.
+
+```
+┌───────────────────────────────────────────────┐
+│  Application   owns everything, main loop     │   top
+├───────────────────────────────────────────────┤
+│  Game          UI          Save               │   gameplay layer
+├───────────────────────────────────────────────┤
+│  AI       Physics      World       Audio      │   systems layer
+├───────────────────────────────────────────────┤
+│  Renderer                 Config              │   engine layer
+├───────────────────────────────────────────────┤
+│  Platform   SDL3: window, context, input      │
+├───────────────────────────────────────────────┤
+│  Core       time, logging, math, files        │   bottom
+└───────────────────────────────────────────────┘
+        dependencies point downwards only
+```
+
+| Module        | Responsibility                                                  | Status  |
+|---------------|-----------------------------------------------------------------|---------|
+| `Core`        | Time, logging, assertions, math helpers, file reading           | 0.1     |
+| `Platform`    | SDL3 window, OpenGL context creation, raw input events          | 0.1     |
+| `Renderer`    | Everything OpenGL. Exposes a high-level API (see section 6)     | 0.1     |
+| `Config`      | Loading JSON data and settings                                  | Planned |
+| `World`       | Level loading, `.map` parsing, level compiler, entity spawning  | Planned |
+| `Physics`     | Quake-style movement, collision against the level               | Planned |
+| `AI`          | Enemy behaviour, pathfinding                                    | Planned |
+| `Audio`       | Sounds and music (miniaudio)                                    | Planned |
+| `Game`        | ECS components and gameplay systems: player, weapons, enemies   | Planned |
+| `UI`          | HUD, menus; Dear ImGui debug overlay                            | Planned |
+| `Save`        | Serialization of the game state                                 | Planned |
+| `Application` | Startup, shutdown, main loop, switching between game states     | 0.1     |
+
+**Rules**
+
+- No dependency cycles and no upward dependencies. `Renderer` never includes
+  anything from `Game`.
+- OpenGL is used only inside `Renderer`, SDL only inside `Platform`.
+- There is no graphics-API abstraction layer (RHI): OpenGL is the only
+  backend. The boundary is the renderer's high-level API instead.
+- The engine and game layers are not split into separate libraries yet.
+  The one-directional dependency rule keeps that possible later.
+
+## 5. Main loop — Planned (0.2)
+
+Gameplay and physics run at a **fixed timestep**; rendering runs as fast as
+allowed (or at the V-Sync / FPS limit) and **interpolates** between the last
+two simulation states.
+
+```
+accumulator += frameTime
+while accumulator >= FixedDeltaTime:      // e.g. 1/60 s
+    ProcessInput()
+    Simulate(FixedDeltaTime)              // physics, AI, gameplay
+    accumulator -= FixedDeltaTime
+alpha = accumulator / FixedDeltaTime
+Render(alpha)                             // interpolate between states
+```
+
+Why: movement and physics behave identically at 30 and 300 FPS, jump height
+does not depend on frame rate, and simulation is deterministic enough for
+tests. In 0.1 the fly camera uses a simple variable timestep.
+
+## 6. Renderer
+
+**Planned** high-level API: the game describes *what* to draw, the renderer
+decides *how*.
+
+```cpp
+renderer.BeginFrame(camera);
+renderer.Submit(mesh, material, transform);   // many times
+renderer.SubmitLight(light);
+renderer.EndFrame();                          // sorts, batches, draws
+```
+
+Inside the renderer:
+
+- **RAII wrappers** for every OpenGL object (`GLBuffer`, `GLTexture`,
+  `GLShaderProgram`, `GLVertexArray`, `GLFramebuffer`) — move-only, the
+  destructor calls `glDelete*`.
+- **Direct State Access** everywhere (OpenGL 4.5+).
+- **Debug output** (`GL_KHR_debug`) enabled in Debug builds, routed to the
+  logger.
+
+## 7. ECS — Planned (0.2)
+
+Library: **EnTT**.
+
+- **Entity** — just an ID.
+- **Component** — a plain struct with public data and no logic:
+  `Transform`, `Velocity`, `Health`, `Weapon`.
+- **System** — a function (or a small class when it needs state) that
+  iterates entities with a given set of components and updates them:
+  `UpdateMovement(registry, dt)`.
+- One `entt::registry` per loaded level. Loading a level creates a fresh
+  registry; unloading destroys it.
+- Static level geometry is **not** stored as entities; it is owned by the
+  `World` module in structures optimized for rendering and collision.
+
+## 8. Data-driven design — Planned
+
+- Balance values (weapon damage, enemy health, speeds) are read from
+  `Assets/Configs/*.json`.
+- User settings are stored separately in the user's folder
+  (`%APPDATA%/AloneBull/Abomination/`), never in `Assets/`.
+
+## 9. Save system — Planned (0.8)
+
+Every gameplay component must be serializable. Rules to follow from 0.2:
+
+- Components store **data, not pointers** — references to other entities are
+  stored as entity IDs, references to resources as asset IDs/paths.
+- No hidden state in systems that would be lost on save/load.
+
+## 10. Threading
+
+Single-threaded for now. Candidates for background threads later: asset
+loading, audio (miniaudio already runs its own thread), lightmap baking.

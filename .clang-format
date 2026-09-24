@@ -16,10 +16,11 @@ IndentPPDirectives: BeforeHash
 
 # Braces (Allman)
 BreakBeforeBraces: Allman
-InsertBraces: true
+InsertBraces: false
+RemoveBracesLLVM: true
 
 # Line length
-ColumnLimit: 100
+ColumnLimit: 127
 
 # Pointers and references bind to the type
 PointerAlignment: Left
@@ -36,14 +37,14 @@ AllowShortEnumsOnASingleLine: false
 
 # Declarations and calls
 AlwaysBreakTemplateDeclarations: Yes
-BinPackArguments: false
-BinPackParameters: false
+BinPackArguments: true
+BinPackParameters: true
 AlignAfterOpenBracket: Align
 BreakConstructorInitializers: BeforeComma
 PackConstructorInitializers: Never
 
 # Namespaces
-FixNamespaceComments: true
+FixNamespaceComments: false
 ShortNamespaceLines: 0
 
 # Blank lines

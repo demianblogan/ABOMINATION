@@ -49,25 +49,44 @@ found during review.
 - **Abbreviations are always written in capitals**, in every kind of name,
   including local variables: `GLBuffer`, `LoadJSON()`, `HUDLayer`,
   `m_entityID`, `playerHUD`, `JSONText`, `ID`.
-- Booleans read as a question: `isGrounded`, `hasArmor`, `canJump`.
-- Functions start with a verb: `CreateWindow()`, `ApplyDamage()`.
-  Simple getters have no `Get` prefix and are named after the member:
-  member `m_width` → getter `Width()`. Setters use `Set`: `SetVSync(bool)`.
+- **Booleans** (variables, members, parameters and constants) follow one of
+  three patterns depending on what they mean:
+
+  | Meaning                         | Pattern                                                              | Examples                                   |
+  |---------------------------------|----------------------------------------------------------------------|--------------------------------------------|
+  | Describes a state of something  | `is`/`are`/`was`/`were`/`have`/`had` + *noun (optional)* + **adjective** | `isGrounded`, `isDoorOpen`, `areEnemiesAlerted`, `wasLevelCompleted` |
+  | An action that has to be done   | `needTo` + **verb**                                                  | `needToWriteToConsole`, `NeedToTruncateFile` |
+  | An action that has been done    | **noun** + **verb in the past tense**                                | `levelLoaded`, `playerJumped`, `buttonPressed` |
+- **Functions and methods start with a verb**: `CreateWindow()`,
+  `ApplyDamage()`, `GetLogger()`, `ConvertToString()` — not `LoggerFor()` or
+  `ToString()`. The only exception are functions that check a state and return
+  `bool`: they follow the boolean patterns above (`IsLevelEnabled()`).
+- Getters use `Get`, setters use `Set`: member `m_width` → `GetWidth()`,
+  `SetWidth(int)`; `SetVSync(bool)`.
 - Macros are avoided. A naming rule for them will be added if one is ever
   needed.
 - No Hungarian notation (`iCount`, `pData`, `strName`).
 - The root namespace is `Abomination`. Every module has a nested namespace
   matching its folder: `SourceCode/Renderer/` → `Abomination::Renderer`.
+- Implementation details that must be visible in a header (for example,
+  functions called by a template) go into a nested `Internal` namespace and
+  are not called from outside the module. Details that do not need to be in a
+  header live in an anonymous namespace in the `.cpp`.
 
 ## 4. Formatting
 
 Handled by clang-format. The main choices:
 
-- 4 spaces, no tabs. Line limit **100** columns.
+- 4 spaces, no tabs. Line limit **127** columns. A statement that fits into
+  127 columns stays on one line; only a longer one is wrapped.
 - **Allman** braces — every brace on its own line.
+  Exception: the opening brace of a braced initializer list stays on the same
+  line (`std::array names{`, `LogSettings{`). It starts an expression, not a
+  block of code, and clang-format cannot move it.
 - Contents of a namespace are **indented**.
 - Pointer and reference bind to the type: `int* ptr`, `const Mesh& mesh`.
-- Always use braces for `if`/`for`/`while` bodies, even for one line.
+- `if`/`for`/`while` with a **single statement** have no braces; with two or
+  more statements braces are required.
 
 ```cpp
 namespace Abomination::Renderer
@@ -77,21 +96,20 @@ namespace Abomination::Renderer
     public:
         explicit ShaderProgram(std::uint32_t programID) noexcept;
 
-        [[nodiscard]] std::uint32_t ProgramID() const noexcept { return m_programID; }
+        [[nodiscard]] std::uint32_t GetProgramID() const noexcept { return m_programID; }
 
         void Bind() const
         {
             if (m_programID == 0)
-            {
                 return;
-            }
+
             glUseProgram(m_programID);
         }
 
     private:
         std::uint32_t m_programID = 0;
     };
-} // namespace Abomination::Renderer
+}
 ```
 
 ## 5. Includes
@@ -132,6 +150,11 @@ Order, separated by a blank line (clang-format sorts inside groups):
 - Fixed-width integers (`std::uint32_t`, `std::int16_t`) for data with a
   defined size (file formats, GPU data); `int`/`std::size_t` otherwise.
 - `std::string_view` / `std::span` for non-owning parameters.
+- **Explicit checks, no implicit conversion to `bool`**: pointers (raw and
+  smart) are compared with `nullptr`, `std::optional` is checked with
+  `has_value()`.
+  `if (logger != nullptr)`, `if (texture.has_value())` — not `if (logger)`,
+  `if (texture)`.
 
 **Errors**
 
@@ -154,7 +177,8 @@ Order, separated by a blank line (clang-format sorts inside groups):
 ## 7. Comments
 
 - Comments explain **why**, not what. Good names explain what.
-- Public API in headers gets a short `///` comment when its behaviour is not
+- Comments use `//` only (no `///`, no `/* */` for documentation).
+- Public API in headers gets a short `//` comment when its behaviour is not
   obvious from the name.
 - `// TODO(Module): ...` for known unfinished work; do not leave commented-out
   code.
@@ -228,6 +252,9 @@ void main()
 - GoogleTest. One test file per tested unit: `FlyCameraTests.cpp`.
 - `TEST(Suite, Behavior)`: suite is the tested type, behavior describes the
   expected result in PascalCase: `TEST(FlyCamera, MovesForwardAlongViewDirection)`.
+- When tests share setup code, a fixture class named `<TestedType>Test` is used
+  with `TEST_F`: `class LogTest : public ::testing::Test`. The `Test` suffix
+  avoids clashes with a namespace or class of the same name (`Log`).
 - Arrange / Act / Assert, separated by blank lines.
 - Tests do not need an OpenGL context. Code that needs one is kept thin so
   the logic around it can be tested separately.

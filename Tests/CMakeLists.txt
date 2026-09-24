@@ -1,8 +1,13 @@
 find_package(GTest CONFIG REQUIRED)
 
 # --- Unit tests: one executable for all tests, mirrors SourceCode/ ------------
-add_executable(AbominationTests
+set(TEST_SOURCES
+    Core/LogTests.cpp
     Core/VersionTests.cpp
+)
+
+add_executable(AbominationTests
+    ${TEST_SOURCES}
 )
 target_link_libraries(AbominationTests PRIVATE
     AbominationCore
@@ -11,7 +16,7 @@ target_link_libraries(AbominationTests PRIVATE
 )
 abomination_set_compiler_options(AbominationTests)
 
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES Core/VersionTests.cpp)
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${TEST_SOURCES})
 
 # --- CTest integration -------------------------------------------------------
 # Registers every TEST(...) as a separate CTest test. PRE_TEST lists the tests

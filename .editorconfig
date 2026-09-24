@@ -10,7 +10,7 @@ insert_final_newline = true
 trim_trailing_whitespace = true
 
 [*.{cpp,hpp,h,vert,frag,geom,comp,glsl}]
-max_line_length = 100
+max_line_length = 127
 
 [*.{json,yml,yaml}]
 indent_size = 2

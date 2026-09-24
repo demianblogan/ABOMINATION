@@ -4,7 +4,7 @@
 
 namespace Abomination::Core
 {
-    Version GameVersion() noexcept
+    Version GetGameVersion() noexcept
     {
         return Version{
             .major = @PROJECT_VERSION_MAJOR@,
@@ -13,8 +13,8 @@ namespace Abomination::Core
         };
     }
 
-    std::string_view GameVersionString() noexcept
+    std::string_view GetGameVersionString() noexcept
     {
         return "@PROJECT_VERSION@";
     }
-} // namespace Abomination::Core
+}

@@ -11,9 +11,9 @@ screen. Third-party **assets** are listed separately in
 Libraries linked into `Abomination.exe`. Their licenses must be respected in
 every release.
 
-| Library | Version | License | Purpose | Website |
-|---------|---------|---------|---------|---------|
-| *(none yet)* | | | | |
+| Library | Version | License | Purpose                                  | Website                          |
+|---------|---------|---------|------------------------------------------|----------------------------------|
+| spdlog  | 1.17.0  | MIT     | Logging (`Core/Log`), built without fmt  | https://github.com/gabime/spdlog |
 
 ## Development only
 

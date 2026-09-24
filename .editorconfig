@@ -1,0 +1,23 @@
+# Editor settings shared by Visual Studio, VS Code and others.
+# Line endings are handled by .gitattributes.
+root = true
+
+[*]
+charset = utf-8
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{cpp,hpp,h,vert,frag,geom,comp,glsl}]
+max_line_length = 100
+
+[*.{json,yml,yaml}]
+indent_size = 2
+
+[CMakePresets.json]
+indent_size = 2
+
+[*.md]
+# Two trailing spaces are a line break in Markdown.
+trim_trailing_whitespace = false

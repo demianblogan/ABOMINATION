@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# A new push to the same branch or PR cancels the run that is still in progress.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build and test (${{ matrix.configuration }})
+    runs-on: windows-2025-vs2026
+
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration: [debug, release]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      # vcpkg is cloned at exactly the builtin-baseline commit from vcpkg.json,
+      # so CI uses the same library versions as every developer machine.
+      - name: Set up vcpkg
+        shell: pwsh
+        run: |
+          $baseline = (Get-Content vcpkg.json -Raw | ConvertFrom-Json).'builtin-baseline'
+          $vcpkgRoot = Join-Path $env:RUNNER_TEMP 'vcpkg'
+          git init --quiet $vcpkgRoot
+          git -C $vcpkgRoot remote add origin https://github.com/microsoft/vcpkg.git
+          git -C $vcpkgRoot fetch --quiet --depth 1 origin $baseline
+          git -C $vcpkgRoot checkout --quiet FETCH_HEAD
+          & (Join-Path $vcpkgRoot 'bootstrap-vcpkg.bat') -disableMetrics
+          $cacheDir = Join-Path $env:RUNNER_TEMP 'vcpkg-binary-cache'
+          New-Item -ItemType Directory -Force $cacheDir | Out-Null
+          "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
+          "VCPKG_BINARY_SOURCES=clear;files,$cacheDir,readwrite" >> $env:GITHUB_ENV
+          "VCPKG_BINARY_CACHE_DIR=$cacheDir" >> $env:GITHUB_ENV
+
+      # Already built libraries are restored from the cache instead of being
+      # compiled again. The key changes when vcpkg.json (dependencies or
+      # baseline) changes.
+      - name: Cache vcpkg binaries
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.VCPKG_BINARY_CACHE_DIR }}
+          key: vcpkg-${{ runner.os }}-${{ matrix.configuration }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-${{ matrix.configuration }}-
+
+      - name: Configure
+        run: cmake --preset windows-msvc
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.configuration }}
+
+      - name: Test
+        run: ctest --preset ${{ matrix.configuration }}

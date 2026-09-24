@@ -17,14 +17,17 @@ found during review.
 
 | Item                 | Rule                                  | Example                              |
 |----------------------|---------------------------------------|--------------------------------------|
-| Header               | `.hpp`                                | `ShaderProgram.hpp`                  |
+| Header               | `.h`                                  | `ShaderProgram.h`                    |
 | Source               | `.cpp`                                | `ShaderProgram.cpp`                  |
-| Code file name       | PascalCase, named after its main type | `FlyCamera.hpp`                      |
-| Folder (any)         | PascalCase                            | `Source/Renderer/`, `Assets/Textures/` |
+| Code file name       | PascalCase, named after its main type | `FlyCamera.h`                        |
+| Folder (any)         | PascalCase, full words (see below)    | `SourceCode/Renderer/`, `Assets/Textures/` |
 | GLSL                 | PascalCase + stage extension          | `TexturedMesh.vert`, `.frag`         |
 | Asset and data file  | PascalCase                            | `Weapons.json`, `RocketLauncher.glb` |
 | Tests                | `<TestedFile>Tests.cpp`               | `FlyCameraTests.cpp`                 |
 
+- **Folders use full words, not industry abbreviations**: `SourceCode`, not
+  `src`; `Documentation`, not `docs`; `Binaries`, not `bin`. Readability comes
+  first. The only exceptions are names fixed by tools: `.github/`.
 - One main type per header. Small helper types that belong to it may live in
   the same file.
 - Headers use `#pragma once`.
@@ -54,7 +57,7 @@ found during review.
   needed.
 - No Hungarian notation (`iCount`, `pData`, `strName`).
 - The root namespace is `Abomination`. Every module has a nested namespace
-  matching its folder: `Source/Renderer/` → `Abomination::Renderer`.
+  matching its folder: `SourceCode/Renderer/` → `Abomination::Renderer`.
 
 ## 4. Formatting
 
@@ -96,7 +99,7 @@ namespace Abomination::Renderer
 Order, separated by a blank line (clang-format sorts inside groups):
 
 1. The matching header (in a `.cpp`).
-2. Project headers — quotes, path from `Source/`: `#include "Renderer/Mesh.hpp"`.
+2. Project headers — quotes, path from `SourceCode/`: `#include "Renderer/Mesh.h"`.
 3. Third-party headers — angle brackets: `#include <glm/glm.hpp>`.
 4. Standard library headers: `#include <vector>`.
 
@@ -228,3 +231,14 @@ void main()
 - Arrange / Act / Assert, separated by blank lines.
 - Tests do not need an OpenGL context. Code that needs one is kept thin so
   the logic around it can be tested separately.
+
+## 12. CMake
+
+- Commands, functions and variables of our own follow CMake's convention:
+  lowercase snake_case with the `abomination_` prefix for functions
+  (`abomination_set_compiler_options`), UPPER_SNAKE for variables
+  (`GENERATED_DIR`).
+- Target names are PascalCase: `AbominationCore`, `AbominationTests`.
+- Source files are listed explicitly — no `file(GLOB ...)`.
+- Compiler options and dependencies are set per target
+  (`target_compile_options`, `target_link_libraries`), never globally.

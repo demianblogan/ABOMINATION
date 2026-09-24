@@ -15,6 +15,9 @@ namespace Abomination::Platform
         int width = 1280;
         int height = 720;
         bool isResizable = true;
+
+        // V-Sync: SwapBuffers() waits for the monitor refresh. No tearing, and the frame rate never exceeds the refresh rate.
+        bool isVSyncEnabled = true;
     };
 
     // An operating system window with an OpenGL 4.6 Core context attached to it.
@@ -40,14 +43,20 @@ namespace Abomination::Platform
 
         [[nodiscard]] bool IsCloseRequested() const noexcept;
 
+        // Size of the drawable area in pixels. OpenGL works in pixels, so these are the values for glViewport.
+        [[nodiscard]] int GetWidthInPixels() const noexcept;
+        [[nodiscard]] int GetHeightInPixels() const noexcept;
+
     private:
-        Window(SDL_Window* window, SDL_GLContextState* context) noexcept;
+        Window(SDL_Window* window, SDL_GLContextState* context, int widthInPixels, int heightInPixels) noexcept;
 
         void Destroy() noexcept;
 
         SDL_Window* m_window = nullptr;
         SDL_GLContextState* m_context = nullptr;
         bool m_isCloseRequested = false;
+        int m_widthInPixels = 0;
+        int m_heightInPixels = 0;
     };
 
     // Asks the graphics driver for the address of an OpenGL function by its name ("glClear", ...).

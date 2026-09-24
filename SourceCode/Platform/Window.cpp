@@ -59,24 +59,33 @@ namespace Abomination::Platform
             return std::unexpected(std::format("Failed to create an OpenGL 4.6 Core context: {}", SDL_GetError()));
         }
 
-        // V-Sync: SwapBuffers() waits for the monitor refresh, so the loop does not run thousands of frames per second.
-        // It becomes a setting later in this branch.
-        SDL_GL_SetSwapInterval(1);
+        // Swap interval 1: SwapBuffers() waits for one monitor refresh. 0: it returns immediately.
+        SDL_GL_SetSwapInterval(settings.isVSyncEnabled ? 1 : 0);
 
-        Core::Log::Write(LogCategory::Platform, LogLevel::Info, "Window created: {}x{}", settings.width, settings.height);
+        // The size in pixels can differ from the requested size, for example when Windows scales the desktop.
+        int widthInPixels = 0;
+        int heightInPixels = 0;
+        SDL_GetWindowSizeInPixels(window, &widthInPixels, &heightInPixels);
 
-        return Window(window, context);
+        Core::Log::Write(LogCategory::Platform, LogLevel::Info, "Window created: {}x{} pixels, V-Sync {}", widthInPixels,
+                         heightInPixels, settings.isVSyncEnabled ? "on" : "off");
+
+        return Window(window, context, widthInPixels, heightInPixels);
     }
 
-    Window::Window(SDL_Window* window, SDL_GLContextState* context) noexcept
+    Window::Window(SDL_Window* window, SDL_GLContextState* context, int widthInPixels, int heightInPixels) noexcept
         : m_window(window)
         , m_context(context)
+        , m_widthInPixels(widthInPixels)
+        , m_heightInPixels(heightInPixels)
     {}
 
     Window::Window(Window&& other) noexcept
         : m_window(std::exchange(other.m_window, nullptr))
         , m_context(std::exchange(other.m_context, nullptr))
         , m_isCloseRequested(other.m_isCloseRequested)
+        , m_widthInPixels(other.m_widthInPixels)
+        , m_heightInPixels(other.m_heightInPixels)
     {}
 
     Window& Window::operator=(Window&& other) noexcept
@@ -87,6 +96,8 @@ namespace Abomination::Platform
             m_window = std::exchange(other.m_window, nullptr);
             m_context = std::exchange(other.m_context, nullptr);
             m_isCloseRequested = other.m_isCloseRequested;
+            m_widthInPixels = other.m_widthInPixels;
+            m_heightInPixels = other.m_heightInPixels;
         }
 
         return *this;
@@ -102,9 +113,24 @@ namespace Abomination::Platform
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
-            // Sent when the user closes the last window (the close button, Alt+F4).
-            if (event.type == SDL_EVENT_QUIT)
-                m_isCloseRequested = true;
+            switch (event.type)
+            {
+                // The user closes the last window (the close button, Alt+F4).
+                case SDL_EVENT_QUIT:
+                    m_isCloseRequested = true;
+                    break;
+
+                // The drawable area got a new size in pixels (the window was resized, maximized, moved to another monitor).
+                case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+                    m_widthInPixels = event.window.data1;
+                    m_heightInPixels = event.window.data2;
+                    Core::Log::Write(LogCategory::Platform, LogLevel::Debug, "Window resized: {}x{} pixels", m_widthInPixels,
+                                     m_heightInPixels);
+                    break;
+
+                default:
+                    break;
+            }
         }
     }
 
@@ -116,6 +142,16 @@ namespace Abomination::Platform
     bool Window::IsCloseRequested() const noexcept
     {
         return m_isCloseRequested;
+    }
+
+    int Window::GetWidthInPixels() const noexcept
+    {
+        return m_widthInPixels;
+    }
+
+    int Window::GetHeightInPixels() const noexcept
+    {
+        return m_heightInPixels;
     }
 
     void Window::Destroy() noexcept

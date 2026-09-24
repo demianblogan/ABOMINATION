@@ -1,5 +1,6 @@
 # --- Dependencies ------------------------------------------------------------
 find_package(glad CONFIG REQUIRED)
+find_package(glm CONFIG REQUIRED)
 find_package(SDL3 CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 
@@ -16,6 +17,8 @@ set(LIBRARY_SOURCES
     Application/Application.cpp
 
     Core/BuildConfiguration.h
+    Core/FrameTimer.h
+    Core/FrameTimer.cpp
     Core/Log.h
     Core/Log.cpp
     Core/Version.h
@@ -32,6 +35,8 @@ set(LIBRARY_SOURCES
     Renderer/DebugOutput.cpp
     Renderer/OpenGLLoader.h
     Renderer/OpenGLLoader.cpp
+    Renderer/RenderCommands.h
+    Renderer/RenderCommands.cpp
 )
 
 add_library(AbominationCore STATIC
@@ -39,10 +44,13 @@ add_library(AbominationCore STATIC
     ${GENERATED_DIR}/Core/Version.cpp
 )
 target_include_directories(AbominationCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(AbominationCore PRIVATE
-    glad::glad      # PRIVATE: only Renderer/*.cpp include glad, no header does
-    SDL3::SDL3      # PRIVATE: only Platform/*.cpp include SDL, no header does
-    spdlog::spdlog  # PRIVATE: only Log.cpp includes spdlog, Log.h does not
+target_link_libraries(AbominationCore
+    PUBLIC
+        glm::glm-header-only  # Renderer headers use glm types, so everyone who uses the library needs glm too
+    PRIVATE
+        glad::glad            # Only Renderer/*.cpp include glad, no header does
+        SDL3::SDL3            # Only Platform/*.cpp include SDL, no header does
+        spdlog::spdlog        # Only Log.cpp includes spdlog, Log.h does not
 )
 abomination_set_compiler_options(AbominationCore)
 

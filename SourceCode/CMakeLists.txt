@@ -26,6 +26,9 @@ set(LIBRARY_SOURCES
     Core/Version.h
     Core/Version.cpp.in
 
+    Input/Keyboard.h
+    Input/Keyboard.cpp
+
     Platform/ImGuiPlatformBackend.h
     Platform/ImGuiPlatformBackend.cpp
     Platform/SDLLibrary.h

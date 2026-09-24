@@ -81,11 +81,25 @@ namespace Abomination::UI
         ImGui::NewFrame();
 
         // 2. Describe the windows. Nothing is drawn yet: ImGui only records what has to be drawn.
-        DrawStatisticsWindow(frameStatistics);
+        //    While the overlay is hidden the ImGui frame still runs, just without windows: ImGui keeps receiving the
+        //    input and the time, so it is in a consistent state when the overlay is shown again. An empty frame costs
+        //    practically nothing.
+        if (m_isVisible)
+            DrawStatisticsWindow(frameStatistics);
 
         // 3. ImGui turns the recorded windows into lists of triangles, and the OpenGL backend draws them.
         ImGui::Render();
         m_rendererBackend.DrawFrame();
+    }
+
+    void DebugOverlay::ToggleVisibility() noexcept
+    {
+        m_isVisible = !m_isVisible;
+    }
+
+    bool DebugOverlay::IsVisible() const noexcept
+    {
+        return m_isVisible;
     }
 
     void DebugOverlay::DrawStatisticsWindow(const Core::FrameStatistics& frameStatistics) const

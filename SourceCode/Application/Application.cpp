@@ -83,7 +83,12 @@ namespace Abomination
             frameTimer.StartFrame(Core::FrameTimer::Clock::now());
             frameStatistics.AddFrame(frameTimer.GetDeltaTime());
 
-            m_window.ProcessEvents();
+            m_window.ProcessEvents(m_keyboard);
+
+            // A direct key check for now. When the action layer of input appears (the fly camera branch), this becomes
+            // the ToggleDebugOverlay action, and the key is taken from the bindings instead of being written here.
+            if (m_keyboard.WasKeyPressed(Input::Key::F1))
+                m_debugOverlay.ToggleVisibility();
 
             Renderer::SetViewport(m_window.GetWidthInPixels(), m_window.GetHeightInPixels());
             Renderer::ClearFrame(CalculateBackgroundColor(frameTimer.GetTotalTime()));

@@ -2,6 +2,7 @@
 
 #include "Core/BuildConfiguration.h"
 #include "Core/Log.h"
+#include "Input/Keyboard.h"
 
 #include <SDL3/SDL.h>
 #include <imgui.h>
@@ -15,6 +16,9 @@ namespace Abomination::Platform
     using Core::LogCategory;
     using Core::LogLevel;
 
+    // Key values are SDL scancodes, so the key state array must have exactly as many entries as SDL has scancodes.
+    static_assert(Input::KeyCount == SDL_SCANCODE_COUNT, "Input::KeyCount must match SDL_SCANCODE_COUNT");
+
     namespace
     {
         // Describes the OpenGL context SDL has to create. Must be called before the window is created,
@@ -26,7 +30,7 @@ namespace Abomination::Platform
             SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
             SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-            // A debug context makes the driver check every call and report problems (used in the next step).
+            // A debug context makes the driver check every call and report problems (see Renderer::EnableDebugOutput).
             // It is slower, so it is requested only in Debug builds.
             if constexpr (Core::IsDebugBuild)
                 SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
@@ -37,6 +41,13 @@ namespace Abomination::Platform
             // Bits per pixel of the depth buffer (which surface is closer) and the stencil buffer (masking).
             SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
             SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+        }
+
+        // True while ImGui wants the keyboard for itself, for example while the user types into an ImGui text field.
+        // The game must not react to those keys then.
+        bool IsKeyboardCapturedByImGui()
+        {
+            return ImGui::GetCurrentContext() != nullptr && ImGui::GetIO().WantCaptureKeyboard;
         }
     }
 
@@ -110,8 +121,11 @@ namespace Abomination::Platform
         Destroy();
     }
 
-    void Window::ProcessEvents()
+    void Window::ProcessEvents(Input::Keyboard& keyboard)
     {
+        // The keys pressed or released during the previous frame are forgotten; this frame's events fill them again.
+        keyboard.StartFrame();
+
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
@@ -135,7 +149,23 @@ namespace Abomination::Platform
                                      m_heightInPixels);
                     break;
 
-                default:
+                // A key went down. "repeat" marks the copies the operating system sends while the key is held.
+                // Presses are ignored while ImGui uses the keyboard, so typing in ImGui does not control the game.
+                // event.key.scancode is the physical position of the key; Input::Key uses the same values.
+                case SDL_EVENT_KEY_DOWN:
+                    if (!event.key.repeat && !IsKeyboardCapturedByImGui())
+                        keyboard.PressKey(static_cast<Input::Key>(event.key.scancode));
+                    break;
+
+                // A key went up. Always passed on, even while ImGui uses the keyboard: otherwise a key pressed
+                // before ImGui took the keyboard would never be released.
+                case SDL_EVENT_KEY_UP:
+                    keyboard.ReleaseKey(static_cast<Input::Key>(event.key.scancode));
+                    break;
+
+                // The window stopped receiving keyboard input (Alt+Tab, a click on another window).
+                case SDL_EVENT_WINDOW_FOCUS_LOST:
+                    keyboard.ReleaseAllKeys();
                     break;
             }
         }

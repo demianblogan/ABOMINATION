@@ -7,6 +7,11 @@
 struct SDL_Window;
 struct SDL_GLContextState;
 
+namespace Abomination::Input
+{
+    class Keyboard;
+}
+
 namespace Abomination::Platform
 {
     struct WindowSettings
@@ -35,8 +40,9 @@ namespace Abomination::Platform
 
         ~Window();
 
-        // Handles all events the operating system has sent since the last call (closing the window, ...).
-        void ProcessEvents();
+        // Handles all events the operating system has sent since the last call: closing and resizing the window,
+        // keys. Starts a new input frame of the keyboard and fills it with the key presses and releases of this frame.
+        void ProcessEvents(Input::Keyboard& keyboard);
 
         // Shows the frame that has just been drawn: swaps the back buffer and the front buffer.
         void SwapBuffers();

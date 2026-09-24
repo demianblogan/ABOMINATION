@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/BuildConfiguration.h"
 #include "Platform/ImGuiPlatformBackend.h"
 #include "Renderer/ImGuiRendererBackend.h"
 #include "UI/ImGuiLibrary.h"
@@ -30,6 +31,11 @@ namespace Abomination::UI
         // Must be called once per frame, after the game is drawn and before the buffers are swapped.
         void Draw(const Core::FrameStatistics& frameStatistics);
 
+        // Shows the overlay if it is hidden and hides it if it is shown.
+        void ToggleVisibility() noexcept;
+
+        [[nodiscard]] bool IsVisible() const noexcept;
+
     private:
         DebugOverlay(ImGuiLibrary library, Platform::ImGuiPlatformBackend platformBackend,
                      Renderer::ImGuiRendererBackend rendererBackend, std::string GPUName) noexcept;
@@ -44,5 +50,8 @@ namespace Abomination::UI
 
         // Asked from the driver once: it does not change while the game runs.
         std::string m_GPUName;
+
+        // Visible from the start in Debug builds, where the numbers are needed most; F1 toggles it in any build.
+        bool m_isVisible = Core::IsDebugBuild;
     };
 }

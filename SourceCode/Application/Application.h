@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Input/Keyboard.h"
 #include "Platform/SDLLibrary.h"
 #include "Platform/Window.h"
 #include "UI/DebugOverlay.h"
@@ -28,5 +29,8 @@ namespace Abomination
         Platform::SDLLibrary m_SDLLibrary;
         Platform::Window m_window;
         UI::DebugOverlay m_debugOverlay;
+
+        // State of the keyboard for the current frame: the window fills it, the game reads it.
+        Input::Keyboard m_keyboard;
     };
 }

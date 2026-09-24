@@ -6,6 +6,8 @@ set(TEST_SOURCES
     Core/FrameTimerTests.cpp
     Core/LogTests.cpp
     Core/VersionTests.cpp
+
+    Input/KeyboardTests.cpp
 )
 
 add_executable(AbominationTests

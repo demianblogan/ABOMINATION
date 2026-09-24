@@ -1,0 +1,32 @@
+# --- Build output ---
+/build/
+/out/
+
+# --- vcpkg (manifest mode installs next to the build) ---
+/vcpkg_installed/
+
+# --- CMake ---
+CMakeUserPresets.json
+CMakeCache.txt
+CMakeFiles/
+
+# --- Visual Studio ---
+.vs/
+*.user
+*.suo
+*.VC.db
+*.VC.opendb
+
+# --- Visual Studio Code / other editors ---
+.vscode/
+.idea/
+
+# --- Runtime files written by the game ---
+/saves/
+*.log
+imgui.ini
+
+# --- OS ---
+Thumbs.db
+Desktop.ini
+.DS_Store

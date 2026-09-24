@@ -57,17 +57,23 @@ namespace Abomination
         if constexpr (Core::IsDebugBuild)
             Renderer::EnableDebugOutput();
 
+        std::expected<Renderer::DemoScene, std::string> demoScene = Renderer::DemoScene::Create(assetsDirectory);
+        if (!demoScene.has_value())
+            return std::unexpected(demoScene.error());
+
         const std::filesystem::path debugUIFontPath = assetsDirectory / "Fonts" / "JetBrainsMonoRegular.ttf";
         std::expected<UI::DebugOverlay, std::string> debugOverlay = UI::DebugOverlay::Create(*window, debugUIFontPath);
         if (!debugOverlay.has_value())
             return std::unexpected(debugOverlay.error());
 
-        return Application(std::move(*SDLLibrary), std::move(*window), std::move(*debugOverlay));
+        return Application(std::move(*SDLLibrary), std::move(*window), std::move(*demoScene), std::move(*debugOverlay));
     }
 
-    Application::Application(Platform::SDLLibrary SDLLibrary, Platform::Window window, UI::DebugOverlay debugOverlay) noexcept
+    Application::Application(Platform::SDLLibrary SDLLibrary, Platform::Window window, Renderer::DemoScene demoScene,
+                             UI::DebugOverlay debugOverlay) noexcept
         : m_SDLLibrary(std::move(SDLLibrary))
         , m_window(std::move(window))
+        , m_demoScene(std::move(demoScene))
         , m_debugOverlay(std::move(debugOverlay))
     {}
 
@@ -93,6 +99,7 @@ namespace Abomination
 
             Renderer::SetViewport(m_window.GetWidthInPixels(), m_window.GetHeightInPixels());
             Renderer::ClearFrame(CalculateBackgroundColor(frameTimer.GetTotalTime()));
+            m_demoScene.Draw();
 
             // The overlay is drawn last, on top of the game.
             m_debugOverlay.Draw(frameStatistics);

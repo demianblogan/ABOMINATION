@@ -42,6 +42,14 @@ set(LIBRARY_SOURCES
 
     Renderer/DebugOutput.h
     Renderer/DebugOutput.cpp
+    Renderer/DemoScene.h
+    Renderer/DemoScene.cpp
+    Renderer/GLBuffer.h
+    Renderer/GLBuffer.cpp
+    Renderer/GLShaderProgram.h
+    Renderer/GLShaderProgram.cpp
+    Renderer/GLVertexArray.h
+    Renderer/GLVertexArray.cpp
     Renderer/ImGuiRendererBackend.h
     Renderer/ImGuiRendererBackend.cpp
     Renderer/OpenGLLoader.h

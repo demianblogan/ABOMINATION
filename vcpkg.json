@@ -6,6 +6,12 @@
   "builtin-baseline": "5f96cd15fd745122cf27e0524606d6c1efc5fd07",
   "dependencies": [
     "gtest",
+    {
+      "name": "glad",
+      "features": [
+        "gl-api-46"
+      ]
+    },
     "sdl3",
     {
       "name": "spdlog",

@@ -1,6 +1,9 @@
 #include "Application/Application.h"
 
+#include "Core/BuildConfiguration.h"
 #include "Core/Log.h"
+#include "Renderer/DebugOutput.h"
+#include "Renderer/OpenGLLoader.h"
 
 #include <utility>
 
@@ -18,6 +21,14 @@ namespace Abomination
         std::expected<Platform::Window, std::string> window = Platform::Window::Create(Platform::WindowSettings{});
         if (!window.has_value())
             return std::unexpected(window.error());
+
+        // The window has created the OpenGL context, so the OpenGL functions can be loaded now.
+        std::expected<void, std::string> loadingResult = Renderer::LoadOpenGLFunctions();
+        if (!loadingResult.has_value())
+            return std::unexpected(loadingResult.error());
+
+        if constexpr (Core::IsDebugBuild)
+            Renderer::EnableDebugOutput();
 
         return Application(std::move(*SDLLibrary), std::move(*window));
     }

@@ -49,4 +49,8 @@ namespace Abomination::Platform
         SDL_GLContextState* m_context = nullptr;
         bool m_isCloseRequested = false;
     };
+
+    // Asks the graphics driver for the address of an OpenGL function by its name ("glClear", ...).
+    // Requires a current OpenGL context. Returns nullptr if the driver does not provide the function.
+    [[nodiscard]] void* GetOpenGLFunctionAddress(const char* name);
 }

@@ -55,6 +55,7 @@ namespace Abomination::Platform
         if (context == nullptr)
         {
             SDL_DestroyWindow(window);
+
             return std::unexpected(std::format("Failed to create an OpenGL 4.6 Core context: {}", SDL_GetError()));
         }
 
@@ -63,6 +64,7 @@ namespace Abomination::Platform
         SDL_GL_SetSwapInterval(1);
 
         Core::Log::Write(LogCategory::Platform, LogLevel::Info, "Window created: {}x{}", settings.width, settings.height);
+
         return Window(window, context);
     }
 
@@ -86,6 +88,7 @@ namespace Abomination::Platform
             m_context = std::exchange(other.m_context, nullptr);
             m_isCloseRequested = other.m_isCloseRequested;
         }
+
         return *this;
     }
 
@@ -129,5 +132,11 @@ namespace Abomination::Platform
 
         m_context = nullptr;
         m_window = nullptr;
+    }
+
+    void* GetOpenGLFunctionAddress(const char* name)
+    {
+        // SDL returns a function pointer; glad expects void*. On Windows both have the same size and representation.
+        return reinterpret_cast<void*>(SDL_GL_GetProcAddress(name));
     }
 }

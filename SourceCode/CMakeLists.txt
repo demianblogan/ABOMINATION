@@ -1,4 +1,5 @@
 # --- Dependencies ------------------------------------------------------------
+find_package(glad CONFIG REQUIRED)
 find_package(SDL3 CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 
@@ -26,6 +27,11 @@ set(LIBRARY_SOURCES
     Platform/SystemServices.cpp
     Platform/Window.h
     Platform/Window.cpp
+
+    Renderer/DebugOutput.h
+    Renderer/DebugOutput.cpp
+    Renderer/OpenGLLoader.h
+    Renderer/OpenGLLoader.cpp
 )
 
 add_library(AbominationCore STATIC
@@ -34,6 +40,7 @@ add_library(AbominationCore STATIC
 )
 target_include_directories(AbominationCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(AbominationCore PRIVATE
+    glad::glad      # PRIVATE: only Renderer/*.cpp include glad, no header does
     SDL3::SDL3      # PRIVATE: only Platform/*.cpp include SDL, no header does
     spdlog::spdlog  # PRIVATE: only Log.cpp includes spdlog, Log.h does not
 )

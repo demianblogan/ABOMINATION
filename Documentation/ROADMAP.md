@@ -43,9 +43,9 @@ that you can fly around.
 | 2 | `build/cmake-vcpkg-setup`       | ✅     | CMake, presets, vcpkg manifest, folder structure, empty executable, GoogleTest, CI on GitHub Actions |
 | 3 | `feat/logging`                  | ✅     | spdlog logging: levels, per-module categories, console and log file     |
 | 4 | `feat/window-gl-context`        | ✅     | SDL3 window, OpenGL 4.6 Core context, GLAD 2 loader, debug output, frame timer, animated clear color |
-| 5 | `feat/debug-overlay`            | ⏳     | Dear ImGui overlay with FPS and frame time                              |
-| 6 | `feat/textured-cube`            | ⏳     | Shaders, buffers, vertex array, texture — all with DSA and RAII wrappers |
-| 7 | `feat/fly-camera`               | ⏳     | Input layer over SDL3, camera, mouse + WASD flight, first math unit tests |
+| 5 | `feat/debug-overlay`            | ✅     | Dear ImGui overlay: version, GPU, FPS, frame time graph; keyboard state (`Input` module), F1 toggle |
+| 6 | `feat/textured-cube`            | ⏳     | Assets folder copied next to the executable; shaders, buffers, vertex array, texture — all with DSA and RAII wrappers; JetBrains Mono font for the debug overlay |
+| 7 | `feat/fly-camera`               | ⏳     | Mouse state, input actions and bindings (F1 becomes `ToggleDebugOverlay`), camera, mouse + WASD flight, first math unit tests |
 
 **Done when:** the game opens a window, shows a textured cube that can be
 examined with a free-fly camera, the debug overlay shows FPS, CI builds and
@@ -71,4 +71,14 @@ far:
 
 Ideas that are not assigned to a milestone yet.
 
-- *(empty)*
+- **Developer tools window** (ImGui): buttons and checkboxes instead of typing —
+  list of levels to load, god mode, fly through walls, give weapons. Useful once
+  levels and gameplay exist (around 0.6).
+- **Developer console** in the style of Half-Life: readable long command names
+  (`load_level`, `toggle_god_mode`) with autocompletion while typing and
+  history. Only if the tools window is not enough.
+  Both would call the same **command registry**, so a button and a typed
+  command run the same code.
+- **In-game log viewer**: a third log sink keeping recent messages in memory,
+  shown in the debug overlay with filters by level and category (useful in
+  Release builds without a console window).

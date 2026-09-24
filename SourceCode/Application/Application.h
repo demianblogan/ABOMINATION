@@ -1,7 +1,9 @@
 #pragma once
 
+#include "Input/Keyboard.h"
 #include "Platform/SDLLibrary.h"
 #include "Platform/Window.h"
+#include "UI/DebugOverlay.h"
 
 #include <expected>
 #include <string>
@@ -20,10 +22,15 @@ namespace Abomination
         [[nodiscard]] int Run();
 
     private:
-        Application(Platform::SDLLibrary SDLLibrary, Platform::Window window) noexcept;
+        Application(Platform::SDLLibrary SDLLibrary, Platform::Window window, UI::DebugOverlay debugOverlay) noexcept;
 
-        // Members are destroyed in reverse order of declaration: the window first, then SDL, which the window needs.
+        // Members are destroyed in reverse order of declaration: the overlay first (it uses the window and OpenGL),
+        // then the window, then SDL, which the window needs.
         Platform::SDLLibrary m_SDLLibrary;
         Platform::Window m_window;
+        UI::DebugOverlay m_debugOverlay;
+
+        // State of the keyboard for the current frame: the window fills it, the game reads it.
+        Input::Keyboard m_keyboard;
     };
 }

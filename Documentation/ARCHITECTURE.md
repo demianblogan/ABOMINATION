@@ -89,7 +89,9 @@ A module may depend only on modules **below** it in this diagram.
 ├───────────────────────────────────────────────┤
 │  Renderer                 Config              │   engine layer
 ├───────────────────────────────────────────────┤
-│  Platform   SDL3: window, context, input      │
+│  Platform   SDL3: window, context, OS events  │
+├───────────────────────────────────────────────┤
+│  Input      device state, actions (no SDL)    │
 ├───────────────────────────────────────────────┤
 │  Core       time, logging, math, files        │   bottom
 └───────────────────────────────────────────────┘
@@ -98,8 +100,9 @@ A module may depend only on modules **below** it in this diagram.
 
 | Module        | Responsibility                                                  | Status  |
 |---------------|-----------------------------------------------------------------|---------|
-| `Core`        | Time, logging, assertions, math helpers, file reading           | 0.1     |
-| `Platform`    | SDL3 window, OpenGL context creation, raw input events          | 0.1     |
+| `Core`        | Time, frame statistics, logging, assertions, math, file reading | 0.1     |
+| `Input`       | State of input devices, later actions and bindings (see 7)      | 0.1     |
+| `Platform`    | SDL3 window, OpenGL context creation, OS events → `Input`       | 0.1     |
 | `Renderer`    | Everything OpenGL. Exposes a high-level API (see section 6)     | 0.1     |
 | `Config`      | Loading JSON data and settings                                  | Planned |
 | `World`       | Level loading, `.map` parsing, level compiler, entity spawning  | Planned |
@@ -107,7 +110,7 @@ A module may depend only on modules **below** it in this diagram.
 | `AI`          | Enemy behaviour, pathfinding                                    | Planned |
 | `Audio`       | Sounds and music (miniaudio)                                    | Planned |
 | `Game`        | ECS components and gameplay systems: player, weapons, enemies   | Planned |
-| `UI`          | HUD, menus; Dear ImGui debug overlay                            | Planned |
+| `UI`          | Dear ImGui debug overlay (0.1); HUD and menus (later)           | 0.1     |
 | `Save`        | Serialization of the game state                                 | Planned |
 | `Application` | Startup, shutdown, main loop, switching between game states     | 0.1     |
 
@@ -124,6 +127,14 @@ A module may depend only on modules **below** it in this diagram.
   are only forward-declared, so the libraries stay private to their module
   (linked `PRIVATE` in CMake). glm is the exception: it is a math library
   used in interfaces everywhere, so it is linked `PUBLIC`.
+- `Input` knows nothing about SDL or the operating system. `Platform`
+  translates SDL events into `Input` types, so `Input` sits below `Platform`.
+- **Dear ImGui is split by module** so that the SDL and OpenGL rules above
+  still hold: `UI::ImGuiLibrary` owns the ImGui context,
+  `Platform::ImGuiPlatformBackend` wraps the SDL3 backend (input, window
+  size, time), `Renderer::ImGuiRendererBackend` wraps the OpenGL backend
+  (drawing), and `UI::DebugOverlay` combines them and describes the windows.
+  ImGui is used only for developer tools, never for the game interface.
 
 **Startup order** (`Main.cpp` → `Application::Create`)
 
@@ -135,6 +146,7 @@ A module may depend only on modules **below** it in this diagram.
    checks that 4.6 is available.
 5. In Debug builds `Renderer::EnableDebugOutput` routes driver messages to the
    log.
+6. `UI::DebugOverlay` creates the ImGui context and both backends.
 
 Objects that own resources are created by a static `Create()` /
 `Initialize()` returning `std::expected<Object, std::string>`, because a
@@ -146,10 +158,15 @@ destroyed before logging stops, so the shutdown is recorded.
 
 ## 5. Main loop — Planned (0.2)
 
-**Now (0.1):** one iteration is one frame: `FrameTimer` measures the frame
-time (monotonic clock, frames longer than 0.25 s are clamped), then events
-are processed, the viewport is set to the window size, the frame is drawn and
-the buffers are swapped (waiting for the monitor when V-Sync is on).
+**Now (0.1):** one iteration is one frame:
+
+1. `FrameTimer` measures the frame time (monotonic clock, frames longer than
+   0.25 s are clamped); `FrameStatistics` remembers the last 120 frame times.
+2. `Window::ProcessEvents` handles the OS events and fills `Input::Keyboard`.
+3. Input is read (F1 toggles the debug overlay).
+4. The viewport is set to the window size and the frame is drawn.
+5. The debug overlay is drawn on top of the frame.
+6. The buffers are swapped (waiting for the monitor when V-Sync is on).
 
 **Planned:**
 
@@ -204,7 +221,52 @@ The executable exports `NvOptimusEnablement` and
 `AmdPowerXpressRequestHighPerformance`, so laptops with hybrid graphics run
 the game on the discrete GPU.
 
-## 7. ECS — Planned (0.2)
+## 7. Input
+
+Input is built in layers; each layer only talks to its neighbours.
+
+```
+OS → [Platform] SDL events
+          │
+          ├─► ImGui first (while it captures the keyboard, the game gets no presses)
+          ▼
+     [Input] device state for this frame          ← 0.1: keyboard
+          "F1 pressed this frame", "W held", mouse movement
+          ▼
+     [Input] actions and bindings                  ← planned: fly camera branch (0.1)
+          ToggleDebugOverlay ← F1, MoveForward ← W / left stick
+          ▼
+     Game code asks for actions, never for keys:
+          if (input.WasActionPressed(Action::Jump)) ...
+```
+
+**Principles**
+
+- Keys are **physical positions** (scancodes, USB HID codes), not characters:
+  WASD stays in place on an AZERTY keyboard.
+- Every key has three states per frame: **held**, **pressed this frame**,
+  **released this frame**. Toggles use "pressed", movement uses "held".
+- The game **polls** the state once per frame instead of reacting to
+  callbacks, so input is handled at one predictable point of the frame.
+- Key repeats from the OS are ignored; all keys are released when the window
+  loses focus, so no key stays stuck after Alt+Tab.
+- The game code knows **actions**, not keys. This is what makes key
+  rebinding and gamepad support possible without changing gameplay code.
+
+**Ownership:** `Application` owns the input state (`Input::Keyboard`);
+`Platform::Window::ProcessEvents` fills it every frame. The window does not
+store input.
+
+**Plan**
+
+| Layer                                   | When                       |
+|-----------------------------------------|----------------------------|
+| Keyboard state                          | 0.1 — done                 |
+| Mouse state, actions and bindings       | 0.1 — `feat/fly-camera`    |
+| Gamepad (Xbox, DualSense)               | 0.7                        |
+| Bindings from settings, rebinding screen| 0.8                        |
+
+## 8. ECS — Planned (0.2)
 
 Library: **EnTT**.
 
@@ -219,14 +281,14 @@ Library: **EnTT**.
 - Static level geometry is **not** stored as entities; it is owned by the
   `World` module in structures optimized for rendering and collision.
 
-## 8. Data-driven design — Planned
+## 9. Data-driven design — Planned
 
 - Balance values (weapon damage, enemy health, speeds) are read from
   `Assets/Configurations/*.json`.
 - User settings are stored separately in the user's folder
   (`%APPDATA%/AloneBull/Abomination/`), never in `Assets/`.
 
-## 9. Save system — Planned (0.8)
+## 10. Save system — Planned (0.8)
 
 Every gameplay component must be serializable. Rules to follow from 0.2:
 
@@ -234,7 +296,7 @@ Every gameplay component must be serializable. Rules to follow from 0.2:
   stored as entity IDs, references to resources as asset IDs/paths.
 - No hidden state in systems that would be lost on save/load.
 
-## 10. Threading
+## 11. Threading
 
 Single-threaded for now. Candidates for background threads later: asset
 loading, audio (miniaudio already runs its own thread), lightmap baking.

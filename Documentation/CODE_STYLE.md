@@ -191,6 +191,11 @@ Order, separated by a blank line (clang-format sorts inside groups):
 - `auto` when the type is obvious from the right side or is noise
   (iterators, lambdas); spell the type when it carries meaning.
 - `enum class` only, never plain `enum`.
+- `switch`: no empty `default: break;` — values that are not listed are simply
+  skipped anyway. A `default` is written only when it does something (returns
+  a fallback value, logs, …). A `switch` over our own `enum class` lists every
+  value and has **no** `default`, so the compiler warns when a new value is
+  added to the enum and a `switch` misses it.
 - Fixed-width integers (`std::uint32_t`, `std::int16_t`) for data with a
   defined size (file formats, GPU data); `int`/`std::size_t` otherwise.
 - `std::string_view` / `std::span` for non-owning parameters.

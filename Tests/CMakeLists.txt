@@ -2,9 +2,12 @@ find_package(GTest CONFIG REQUIRED)
 
 # --- Unit tests: one executable for all tests, mirrors SourceCode/ ------------
 set(TEST_SOURCES
+    Core/FrameStatisticsTests.cpp
     Core/FrameTimerTests.cpp
     Core/LogTests.cpp
     Core/VersionTests.cpp
+
+    Input/KeyboardTests.cpp
 )
 
 add_executable(AbominationTests

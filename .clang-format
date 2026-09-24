@@ -1,0 +1,66 @@
+# Formatting rules — see docs/CODE_STYLE.md, section 4.
+---
+Language: Cpp
+BasedOnStyle: Microsoft
+Standard: Latest
+
+# Indentation
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ContinuationIndentWidth: 4
+AccessModifierOffset: -4
+IndentCaseLabels: true
+NamespaceIndentation: All
+IndentPPDirectives: BeforeHash
+
+# Braces (Allman)
+BreakBeforeBraces: Allman
+InsertBraces: true
+
+# Line length
+ColumnLimit: 100
+
+# Pointers and references bind to the type
+PointerAlignment: Left
+ReferenceAlignment: Left
+DerivePointerAlignment: false
+
+# Short constructs
+AllowShortFunctionsOnASingleLine: InlineOnly
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortLambdasOnASingleLine: All
+AllowShortEnumsOnASingleLine: false
+
+# Declarations and calls
+AlwaysBreakTemplateDeclarations: Yes
+BinPackArguments: false
+BinPackParameters: false
+AlignAfterOpenBracket: Align
+BreakConstructorInitializers: BeforeComma
+PackConstructorInitializers: Never
+
+# Namespaces
+FixNamespaceComments: true
+ShortNamespaceLines: 0
+
+# Blank lines
+MaxEmptyLinesToKeep: 1
+KeepEmptyLinesAtTheStartOfBlocks: false
+SeparateDefinitionBlocks: Always
+
+# Includes: matching header, project, third-party, standard library
+SortIncludes: CaseSensitive
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^"'
+    Priority: 1
+  - Regex: '^<(glad|glm|SDL3|entt|nlohmann|spdlog|imgui|stb|fastgltf|miniaudio|gtest|gmock)[/.]'
+    Priority: 2
+  - Regex: '^<[a-z_]+>$'
+    Priority: 3
+  - Regex: '.*'
+    Priority: 2
+...

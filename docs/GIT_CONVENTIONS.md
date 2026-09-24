@@ -176,7 +176,7 @@ It is filled in automatically when a PR is opened on GitHub.
 **Releasing a milestone**
 
 1. All milestone branches are merged into `main` and CI is green.
-2. `docs/ROADMAP.md` is updated: the milestone is marked as done.
+2. `Docs/ROADMAP.md` is updated: the milestone is marked as done.
 3. An annotated tag is created on `main`:
    ```
    git tag -a v0.1.0 -m "Milestone 0.1 — Foundation"

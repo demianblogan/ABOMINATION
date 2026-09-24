@@ -26,6 +26,6 @@
 
 - [ ] Builds in Debug and Release without warnings (`/W4`)
 - [ ] All tests pass (`ctest`)
-- [ ] New code follows `docs/CODE_STYLE.md`
+- [ ] New code follows `Docs/CODE_STYLE.md`
 - [ ] Documentation updated if needed
-- [ ] New assets are listed in `docs/ASSETS.md`
+- [ ] New assets are listed in `Docs/ASSETS.md`

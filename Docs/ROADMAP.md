@@ -39,7 +39,7 @@ that you can fly around.
 
 | # | Branch                          | Status | Content                                                                 |
 |---|---------------------------------|--------|-------------------------------------------------------------------------|
-| 1 | `docs/project-foundation`       | 🔨     | Roadmap, code style, git conventions, architecture draft, assets list, PR template, clang-format, editorconfig |
+| 1 | `docs/project-foundation`       | ✅     | Roadmap, code style, git conventions, architecture draft, assets list, PR template, clang-format, editorconfig |
 | 2 | `build/cmake-vcpkg-setup`       | ⏳     | CMake, presets, vcpkg manifest, folder structure, empty executable, GoogleTest, CI on GitHub Actions |
 | 3 | `feat/window-gl-context`        | ⏳     | SDL3 window, OpenGL 4.6 core context via glad2, debug message callback, main loop, clear color |
 | 4 | `feat/logging-debug-overlay`    | ⏳     | spdlog logging, Dear ImGui overlay with FPS and frame time              |

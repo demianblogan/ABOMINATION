@@ -39,7 +39,7 @@ namespace Abomination
         }
     }
 
-    std::expected<Application, std::string> Application::Create()
+    std::expected<Application, std::string> Application::Create(const std::filesystem::path& assetsDirectory)
     {
         std::expected<Platform::SDLLibrary, std::string> SDLLibrary = Platform::SDLLibrary::Initialize();
         if (!SDLLibrary.has_value())
@@ -57,7 +57,8 @@ namespace Abomination
         if constexpr (Core::IsDebugBuild)
             Renderer::EnableDebugOutput();
 
-        std::expected<UI::DebugOverlay, std::string> debugOverlay = UI::DebugOverlay::Create(*window);
+        const std::filesystem::path debugUIFontPath = assetsDirectory / "Fonts" / "JetBrainsMonoRegular.ttf";
+        std::expected<UI::DebugOverlay, std::string> debugOverlay = UI::DebugOverlay::Create(*window, debugUIFontPath);
         if (!debugOverlay.has_value())
             return std::unexpected(debugOverlay.error());
 

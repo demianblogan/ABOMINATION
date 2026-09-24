@@ -44,10 +44,11 @@ namespace Abomination::UI
                                                            ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
     }
 
-    std::expected<DebugOverlay, std::string> DebugOverlay::Create(const Platform::Window& window)
+    std::expected<DebugOverlay, std::string> DebugOverlay::Create(const Platform::Window& window,
+                                                                  const std::filesystem::path& fontPath)
     {
         // The order matters: the context first, then the backends that register themselves in it.
-        std::expected<ImGuiLibrary, std::string> library = ImGuiLibrary::Initialize();
+        std::expected<ImGuiLibrary, std::string> library = ImGuiLibrary::Initialize(fontPath);
         if (!library.has_value())
             return std::unexpected(library.error());
 

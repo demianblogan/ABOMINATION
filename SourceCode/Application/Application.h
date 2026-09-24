@@ -6,6 +6,7 @@
 #include "UI/DebugOverlay.h"
 
 #include <expected>
+#include <filesystem>
 #include <string>
 
 namespace Abomination
@@ -16,7 +17,8 @@ namespace Abomination
     class Application
     {
     public:
-        [[nodiscard]] static std::expected<Application, std::string> Create();
+        // assetsDirectory: the folder with the game files (fonts, shaders, textures), normally next to the executable.
+        [[nodiscard]] static std::expected<Application, std::string> Create(const std::filesystem::path& assetsDirectory);
 
         // Runs the main loop until the window is closed. Returns the exit code of the process.
         [[nodiscard]] int Run();

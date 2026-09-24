@@ -6,6 +6,7 @@
 #include "UI/ImGuiLibrary.h"
 
 #include <expected>
+#include <filesystem>
 #include <string>
 
 namespace Abomination::Core
@@ -25,7 +26,9 @@ namespace Abomination::UI
     class DebugOverlay
     {
     public:
-        [[nodiscard]] static std::expected<DebugOverlay, std::string> Create(const Platform::Window& window);
+        // fontPath: the TTF font of the overlay text (the built-in font is used if the file is missing).
+        [[nodiscard]] static std::expected<DebugOverlay, std::string> Create(const Platform::Window& window,
+                                                                             const std::filesystem::path& fontPath);
 
         // Builds the overlay for the current frame and draws it on top of what is already in the back buffer.
         // Must be called once per frame, after the game is drawn and before the buffers are swapped.

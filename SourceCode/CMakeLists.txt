@@ -17,6 +17,8 @@ set(LIBRARY_SOURCES
     Application/Application.cpp
 
     Core/BuildConfiguration.h
+    Core/FileSystem.h
+    Core/FileSystem.cpp
     Core/FrameStatistics.h
     Core/FrameStatistics.cpp
     Core/FrameTimer.h
@@ -78,3 +80,17 @@ add_executable(Abomination
 )
 target_link_libraries(Abomination PRIVATE AbominationCore)
 abomination_set_compiler_options(Abomination)
+
+# --- Assets: the Assets folder is copied next to the executable ------------------
+# The game finds its files relative to the executable (Platform::GetExecutableDirectory() / "Assets"),
+# the same way it will after installation. The target runs on every build (ALL), but copies only new or
+# changed files, so it takes almost no time. A file deleted from Assets/ stays in the output folder until
+# the Build folder is cleaned.
+add_custom_target(CopyAssets ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
+        ${PROJECT_SOURCE_DIR}/Assets
+        $<TARGET_FILE_DIR:Abomination>/Assets
+    COMMENT "Copying assets next to the executable"
+    VERBATIM
+)
+add_dependencies(Abomination CopyAssets)

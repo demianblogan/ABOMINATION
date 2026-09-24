@@ -1,6 +1,7 @@
 #pragma once
 
 #include <expected>
+#include <filesystem>
 #include <string>
 
 namespace Abomination::UI
@@ -11,7 +12,8 @@ namespace Abomination::UI
     class ImGuiLibrary
     {
     public:
-        [[nodiscard]] static std::expected<ImGuiLibrary, std::string> Initialize();
+        // fontPath: the TTF font for all ImGui text. If the file is missing, the built-in font is used instead.
+        [[nodiscard]] static std::expected<ImGuiLibrary, std::string> Initialize(const std::filesystem::path& fontPath);
 
         ImGuiLibrary(const ImGuiLibrary&) = delete;
         ImGuiLibrary& operator=(const ImGuiLibrary&) = delete;

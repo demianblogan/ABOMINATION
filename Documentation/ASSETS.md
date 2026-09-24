@@ -8,6 +8,7 @@ the license check before a commercial release.
 
 | License                         | Can be sold | Requirement                                   | Allowed |
 |---------------------------------|-------------|-----------------------------------------------|---------|
+| SIL Open Font License (OFL) 1.1 | ✅          | Ship the license text with the font; the font itself must not be sold separately | ✅      |
 | CC0 / Public Domain             | ✅          | None                                          | ✅      |
 | CC-BY 3.0 / 4.0                 | ✅          | Credit the author (Credits screen + this file)| ✅      |
 | Purchased, commercial use       | ✅          | Follow the store's license terms              | ✅      |
@@ -30,4 +31,5 @@ the license check before a commercial release.
 
 | File | Author | Source | License | Modified | Notes |
 |------|--------|--------|---------|----------|-------|
-| *(none yet)* | | | | | |
+| `Fonts/JetBrainsMonoRegular.ttf` | The JetBrains Mono Project Authors | [JetBrains Mono 2.304](https://github.com/JetBrains/JetBrainsMono/releases/tag/v2.304) | SIL Open Font License 1.1 | Renamed from `JetBrainsMono-Regular.ttf` | Debug overlay font. The license must ship with the font |
+| `Fonts/JetBrainsMonoLicense.txt` | The JetBrains Mono Project Authors | Same archive, `OFL.txt` | — | Renamed from `OFL.txt` | License text of the font |

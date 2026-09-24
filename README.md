@@ -1,7 +1,7 @@
 <div align="center">
 
 <!-- Logo goes here once it is ready:
-<img src="Docs/Images/Logo.png" alt="Abomination" width="480">
+<img src="Documentation/Images/Logo.png" alt="Abomination" width="480">
 -->
 
 # ABOMINATION
@@ -14,8 +14,8 @@ built from scratch with modern C++ and OpenGL 4.6.**
 [![SDL3](https://img.shields.io/badge/SDL-3-1D4E89?style=for-the-badge)](https://www.libsdl.org/)
 ![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
 <br>
-[![Status](https://img.shields.io/badge/status-early_development-orange?style=flat-square)](Docs/ROADMAP.md)
-[![Milestone](https://img.shields.io/badge/milestone-0.1_Foundation-blue?style=flat-square)](Docs/ROADMAP.md)
+[![Status](https://img.shields.io/badge/status-early_development-orange?style=flat-square)](Documentation/ROADMAP.md)
+[![Milestone](https://img.shields.io/badge/milestone-0.1_Foundation-blue?style=flat-square)](Documentation/ROADMAP.md)
 [![License](https://img.shields.io/badge/license-PolyForm_Noncommercial_1.0-lightgrey?style=flat-square)](LICENSE.md)
 
 [About](#-about) •
@@ -41,7 +41,7 @@ the enemy AI — is built to be read and learned from.
 
 > [!NOTE]
 > The game is in early development. Nothing is playable yet —
-> follow the [roadmap](Docs/ROADMAP.md) to see what is being built right now.
+> follow the [roadmap](Documentation/ROADMAP.md) to see what is being built right now.
 
 ## 🎯 Features
 
@@ -99,24 +99,24 @@ the enemy AI — is built to be read and learned from.
 | 0.9     | Content Complete       | ⏳     |
 | **1.0** | **Release**            | ⏳     |
 
-<sub>✅ done · 🔨 in progress · ⏳ planned — details in [ROADMAP.md](Docs/ROADMAP.md)</sub>
+<sub>✅ done · 🔨 in progress · ⏳ planned — details in [ROADMAP.md](Documentation/ROADMAP.md)</sub>
 
 ## 📚 Documentation
 
 | Document                                   | What's inside                                         |
 |--------------------------------------------|-------------------------------------------------------|
-| 🗺️ [Roadmap](Docs/ROADMAP.md)               | Milestones from 0.1 to 1.0 and the current plan       |
-| 🏛️ [Architecture](Docs/ARCHITECTURE.md)     | Modules, dependency rules, main loop, renderer, ECS   |
-| ✍️ [Code Style](Docs/CODE_STYLE.md)         | Naming, formatting and C++/GLSL conventions           |
-| 🌿 [Git Conventions](Docs/GIT_CONVENTIONS.md) | Branches, commits, pull requests, versions          |
-| 📦 [Assets](Docs/ASSETS.md)                 | Third-party assets and their licenses                 |
+| 🗺️ [Roadmap](Documentation/ROADMAP.md)               | Milestones from 0.1 to 1.0 and the current plan       |
+| 🏛️ [Architecture](Documentation/ARCHITECTURE.md)     | Modules, dependency rules, main loop, renderer, ECS   |
+| ✍️ [Code Style](Documentation/CODE_STYLE.md)         | Naming, formatting and C++/GLSL conventions           |
+| 🌿 [Git Conventions](Documentation/GIT_CONVENTIONS.md) | Branches, commits, pull requests, versions          |
+| 📦 [Assets](Documentation/ASSETS.md)                 | Third-party assets and their licenses                 |
 
 ## 📜 License
 
 The source code is licensed under the
 **[PolyForm Noncommercial License 1.0.0](LICENSE.md)** — you are welcome to
 read, study and modify it for any noncommercial purpose.
-Third-party assets keep their own licenses, see [ASSETS.md](Docs/ASSETS.md).
+Third-party assets keep their own licenses, see [ASSETS.md](Documentation/ASSETS.md).
 
 ---
 

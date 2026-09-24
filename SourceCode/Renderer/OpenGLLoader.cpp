@@ -6,7 +6,6 @@
 #include <glad/gl.h>
 
 #include <format>
-#include <string_view>
 
 namespace Abomination::Renderer
 {
@@ -15,8 +14,8 @@ namespace Abomination::Renderer
 
     namespace
     {
-        // glGetString returns the text as unsigned bytes; std::format and the log work with char.
-        std::string_view GetOpenGLString(GLenum name)
+        // glGetString returns the text as unsigned bytes; std::string works with char.
+        std::string GetOpenGLString(GLenum name)
         {
             const GLubyte* text = glGetString(name);
             if (text == nullptr)
@@ -46,12 +45,23 @@ namespace Abomination::Renderer
                                                majorVersion, minorVersion));
         }
 
+        const GraphicsDeviceInfo deviceInfo = GetGraphicsDeviceInfo();
+
         Core::Log::Write(LogCategory::Renderer, LogLevel::Info, "OpenGL {}.{} loaded", majorVersion, minorVersion);
-        Core::Log::Write(LogCategory::Renderer, LogLevel::Info, "GPU: {} ({})", GetOpenGLString(GL_RENDERER),
-                         GetOpenGLString(GL_VENDOR));
-        Core::Log::Write(LogCategory::Renderer, LogLevel::Info, "Driver: {}", GetOpenGLString(GL_VERSION));
-        Core::Log::Write(LogCategory::Renderer, LogLevel::Info, "GLSL: {}", GetOpenGLString(GL_SHADING_LANGUAGE_VERSION));
+        Core::Log::Write(LogCategory::Renderer, LogLevel::Info, "GPU: {} ({})", deviceInfo.GPUName, deviceInfo.vendor);
+        Core::Log::Write(LogCategory::Renderer, LogLevel::Info, "Driver: {}", deviceInfo.driverVersion);
+        Core::Log::Write(LogCategory::Renderer, LogLevel::Info, "GLSL: {}", deviceInfo.shadingLanguageVersion);
 
         return {};
+    }
+
+    GraphicsDeviceInfo GetGraphicsDeviceInfo()
+    {
+        return GraphicsDeviceInfo{
+            .GPUName = GetOpenGLString(GL_RENDERER),
+            .vendor = GetOpenGLString(GL_VENDOR),
+            .driverVersion = GetOpenGLString(GL_VERSION),
+            .shadingLanguageVersion = GetOpenGLString(GL_SHADING_LANGUAGE_VERSION),
+        };
     }
 }

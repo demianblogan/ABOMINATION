@@ -11,6 +11,12 @@ namespace Abomination::UI
     using Core::LogCategory;
     using Core::LogLevel;
 
+    namespace
+    {
+        // Height of the debug overlay text in pixels. The game interface (menus, HUD) will have its own fonts.
+        constexpr float DebugUIFontSize = 18.0f;
+    }
+
     std::expected<ImGuiLibrary, std::string> ImGuiLibrary::Initialize()
     {
         // Checks that the ImGui headers we compile with match the compiled ImGui library.
@@ -21,6 +27,11 @@ namespace Abomination::UI
 
         // By default ImGui saves window positions to imgui.ini in the current folder. Not needed for a debug overlay.
         ImGui::GetIO().IniFilename = nullptr;
+
+        // The built-in vector font stays sharp at any size, unlike the default pixel font that looks good only at 13 px.
+        // It must be added before the first frame: the first font added becomes the default one.
+        ImGui::GetIO().Fonts->AddFontDefaultVector();
+        ImGui::GetStyle().FontSizeBase = DebugUIFontSize;
 
         ImGui::StyleColorsDark();
 

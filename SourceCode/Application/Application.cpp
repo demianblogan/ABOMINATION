@@ -1,6 +1,7 @@
 #include "Application/Application.h"
 
 #include "Core/BuildConfiguration.h"
+#include "Core/FrameStatistics.h"
 #include "Core/FrameTimer.h"
 #include "Core/Log.h"
 #include "Renderer/DebugOutput.h"
@@ -74,11 +75,13 @@ namespace Abomination
         Core::Log::Write(LogCategory::Core, LogLevel::Info, "Main loop started");
 
         Core::FrameTimer frameTimer(Core::FrameTimer::Clock::now());
+        Core::FrameStatistics frameStatistics;
 
         // One iteration is one frame.
         while (!m_window.IsCloseRequested())
         {
             frameTimer.StartFrame(Core::FrameTimer::Clock::now());
+            frameStatistics.AddFrame(frameTimer.GetDeltaTime());
 
             m_window.ProcessEvents();
 
@@ -86,7 +89,7 @@ namespace Abomination
             Renderer::ClearFrame(CalculateBackgroundColor(frameTimer.GetTotalTime()));
 
             // The overlay is drawn last, on top of the game.
-            m_debugOverlay.Draw();
+            m_debugOverlay.Draw(frameStatistics);
 
             m_window.SwapBuffers();
         }

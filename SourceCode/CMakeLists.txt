@@ -17,6 +17,8 @@ set(LIBRARY_SOURCES
     Application/Application.cpp
 
     Core/BuildConfiguration.h
+    Core/FrameStatistics.h
+    Core/FrameStatistics.cpp
     Core/FrameTimer.h
     Core/FrameTimer.cpp
     Core/Log.h

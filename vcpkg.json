@@ -18,6 +18,7 @@
     {
       "name": "spdlog",
       "default-features": false
-    }
+    },
+    "stb"
   ]
 }

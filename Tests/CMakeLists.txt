@@ -1,10 +1,12 @@
 find_package(GTest CONFIG REQUIRED)
+find_package(Stb REQUIRED)  # ImageTests writes test PNG files with stb_image_write
 
 # --- Unit tests: one executable for all tests, mirrors SourceCode/ ------------
 set(TEST_SOURCES
     Core/FileSystemTests.cpp
     Core/FrameStatisticsTests.cpp
     Core/FrameTimerTests.cpp
+    Core/ImageTests.cpp
     Core/LogTests.cpp
     Core/VersionTests.cpp
 
@@ -19,6 +21,7 @@ target_link_libraries(AbominationTests PRIVATE
     GTest::gtest
     GTest::gtest_main   # Provides main() that runs all tests
 )
+target_include_directories(AbominationTests SYSTEM PRIVATE ${Stb_INCLUDE_DIR})
 abomination_set_compiler_options(AbominationTests)
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${TEST_SOURCES})

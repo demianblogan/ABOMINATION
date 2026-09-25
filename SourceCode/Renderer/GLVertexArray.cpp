@@ -59,6 +59,12 @@ namespace Abomination::Renderer
         glVertexArrayAttribBinding(m_vertexArrayID, attributeIndex, bindingIndex);
     }
 
+    void GLVertexArray::SetIndexBuffer(const GLBuffer& buffer)
+    {
+        // The old way: glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, id) while the vertex array is bound.
+        glVertexArrayElementBuffer(m_vertexArrayID, buffer.GetID());
+    }
+
     void GLVertexArray::Bind() const
     {
         glBindVertexArray(m_vertexArrayID);

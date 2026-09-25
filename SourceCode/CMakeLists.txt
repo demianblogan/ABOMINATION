@@ -3,6 +3,7 @@ find_package(glm CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(SDL3 CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
+find_package(Stb REQUIRED)  # Header-only: provides only Stb_INCLUDE_DIR, no target
 
 # --- Generated sources -------------------------------------------------------
 # The version lives only in project(... VERSION ...) of the root CMakeLists.txt.
@@ -23,6 +24,8 @@ set(LIBRARY_SOURCES
     Core/FrameStatistics.cpp
     Core/FrameTimer.h
     Core/FrameTimer.cpp
+    Core/Image.h
+    Core/Image.cpp
     Core/Log.h
     Core/Log.cpp
     Core/Version.h
@@ -48,6 +51,8 @@ set(LIBRARY_SOURCES
     Renderer/GLBuffer.cpp
     Renderer/GLShaderProgram.h
     Renderer/GLShaderProgram.cpp
+    Renderer/GLTexture.h
+    Renderer/GLTexture.cpp
     Renderer/GLVertexArray.h
     Renderer/GLVertexArray.cpp
     Renderer/ImGuiRendererBackend.h
@@ -68,6 +73,7 @@ add_library(AbominationCore STATIC
     ${GENERATED_DIR}/Core/Version.cpp
 )
 target_include_directories(AbominationCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(AbominationCore SYSTEM PRIVATE ${Stb_INCLUDE_DIR})  # Only Core/Image.cpp includes stb
 target_link_libraries(AbominationCore
     PUBLIC
         glm::glm-header-only  # Renderer headers use glm types, so everyone who uses the library needs glm too

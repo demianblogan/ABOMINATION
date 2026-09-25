@@ -59,14 +59,18 @@ code the game runs. The executable is just an entry point.
   generator, x64, vcpkg toolchain, triplet `x64-windows-static-md` (libraries
   are linked statically into the executable, the C++ runtime dynamically).
 - Code that is not available in vcpkg lives in `ThirdParty/`, each library
-  with its own small CMake target. Its formatting and names are not changed
-  (`ThirdParty/.clang-format` disables formatting).
+  with its own small CMake target and its license file. Its formatting and
+  names are not changed (`ThirdParty/.clang-format` disables formatting).
   - `ThirdParty/GLAD` — GLAD 2 loader generated for OpenGL 4.6 **Core**
     without extensions: functions removed from modern OpenGL (`glBegin`, …)
     are not even declared. vcpkg has only the old GLAD 1. The generation
     settings are written at the top of `include/glad/gl.h`.
 - `CMake/CompilerOptions.cmake` applies `/W4 /WX /permissive- /utf-8 …` to
   every target of ours; third-party headers produce no warnings.
+- `CMake/Packaging.cmake` holds the install rules: `cmake --install` collects
+  the folder a player receives (executable, `Assets/`, the Microsoft C++
+  runtime DLLs, the game license and `Licenses/` of the libraries) into
+  `Build/Package/`.
 - The version exists only in `project(... VERSION ...)`; CMake generates
   `Core/Version.cpp` from it.
 - CI (`.github/workflows/CI.yml`) builds Debug and Release and runs all tests

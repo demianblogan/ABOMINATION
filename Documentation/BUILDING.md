@@ -69,6 +69,22 @@ Replace `debug` with `release` for an optimized build.
 > will then show no tests. If this happens, run
 > *Project → Delete Cache and Reconfigure* in Visual Studio.
 
+## 5. Build the game package
+
+The package is the folder a player receives: everything needed to run the game
+on another computer, without Visual Studio or the Visual C++ Redistributable.
+
+```bash
+cmake --build --preset release
+cmake --install Build/windows-msvc --config Release
+```
+
+The folder `Build/Package/` then contains `Abomination.exe`, `Assets/`, the
+Microsoft C++ runtime DLLs, `LICENSE.md` and `Licenses/` with the licenses of
+the libraries. What goes into it is described in `CMake/Packaging.cmake`.
+Delete `Build/Package/` before installing again: files removed from the
+project are not removed from an existing package.
+
 ## Output
 
 Everything is generated in `Build/<preset>/` (ignored by Git):
@@ -78,6 +94,7 @@ Everything is generated in `Build/<preset>/` (ignored by Git):
 | `Build/windows-msvc/Abomination.slnx`  | Generated Visual Studio solution |
 | `Build/windows-msvc/Binaries/Debug/`   | `Abomination.exe`, `AbominationTests.exe` |
 | `Build/windows-msvc/Binaries/Release/` | Same, optimized               |
+| `Build/Package/`                       | The game package (after `cmake --install`) |
 
 The generated solution can be opened directly, but project settings must be
 changed only in `CMakeLists.txt` — edits made in Visual Studio's project

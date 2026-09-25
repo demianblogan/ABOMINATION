@@ -17,6 +17,8 @@ set(LIBRARY_SOURCES
     Application/Application.h
     Application/Application.cpp
 
+    Core/AssetCache.h
+    Core/AssetHandle.h
     Core/BuildConfiguration.h
     Core/Clock.h
     Core/FileSystem.h

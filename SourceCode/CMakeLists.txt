@@ -3,6 +3,7 @@ find_package(glm CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(SDL3 CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
+find_package(Stb REQUIRED)  # Header-only: provides only Stb_INCLUDE_DIR, no target
 
 # --- Generated sources -------------------------------------------------------
 # The version lives only in project(... VERSION ...) of the root CMakeLists.txt.
@@ -17,10 +18,14 @@ set(LIBRARY_SOURCES
     Application/Application.cpp
 
     Core/BuildConfiguration.h
+    Core/FileSystem.h
+    Core/FileSystem.cpp
     Core/FrameStatistics.h
     Core/FrameStatistics.cpp
     Core/FrameTimer.h
     Core/FrameTimer.cpp
+    Core/Image.h
+    Core/Image.cpp
     Core/Log.h
     Core/Log.cpp
     Core/Version.h
@@ -40,6 +45,16 @@ set(LIBRARY_SOURCES
 
     Renderer/DebugOutput.h
     Renderer/DebugOutput.cpp
+    Renderer/DemoScene.h
+    Renderer/DemoScene.cpp
+    Renderer/GLBuffer.h
+    Renderer/GLBuffer.cpp
+    Renderer/GLShaderProgram.h
+    Renderer/GLShaderProgram.cpp
+    Renderer/GLTexture.h
+    Renderer/GLTexture.cpp
+    Renderer/GLVertexArray.h
+    Renderer/GLVertexArray.cpp
     Renderer/ImGuiRendererBackend.h
     Renderer/ImGuiRendererBackend.cpp
     Renderer/OpenGLLoader.h
@@ -58,6 +73,7 @@ add_library(AbominationCore STATIC
     ${GENERATED_DIR}/Core/Version.cpp
 )
 target_include_directories(AbominationCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(AbominationCore SYSTEM PRIVATE ${Stb_INCLUDE_DIR})  # Only Core/Image.cpp includes stb
 target_link_libraries(AbominationCore
     PUBLIC
         glm::glm-header-only  # Renderer headers use glm types, so everyone who uses the library needs glm too
@@ -78,3 +94,17 @@ add_executable(Abomination
 )
 target_link_libraries(Abomination PRIVATE AbominationCore)
 abomination_set_compiler_options(Abomination)
+
+# --- Assets: the Assets folder is copied next to the executable ------------------
+# The game finds its files relative to the executable (Platform::GetExecutableDirectory() / "Assets"),
+# the same way it will after installation. The target runs on every build (ALL), but copies only new or
+# changed files, so it takes almost no time. A file deleted from Assets/ stays in the output folder until
+# the Build folder is cleaned.
+add_custom_target(CopyAssets ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
+        ${PROJECT_SOURCE_DIR}/Assets
+        $<TARGET_FILE_DIR:Abomination>/Assets
+    COMMENT "Copying assets next to the executable"
+    VERBATIM
+)
+add_dependencies(Abomination CopyAssets)

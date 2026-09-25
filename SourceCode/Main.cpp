@@ -5,6 +5,7 @@
 #include "Platform/SystemServices.h"
 
 #include <expected>
+#include <filesystem>
 #include <string>
 
 // On laptops with hybrid graphics (an integrated and a discrete GPU) the NVIDIA / AMD driver decides which GPU runs
@@ -28,7 +29,10 @@ namespace
     // is destroyed when the function returns, while logging still works and can record the shutdown.
     int RunApplication()
     {
-        std::expected<Application, std::string> application = Application::Create();
+        // CMake copies the Assets folder of the repository next to the executable on every build.
+        const std::filesystem::path assetsDirectory = Platform::GetExecutableDirectory() / "Assets";
+
+        std::expected<Application, std::string> application = Application::Create(assetsDirectory);
         if (!application.has_value())
         {
             Log::Write(LogCategory::Core, LogLevel::Critical, "{}", application.error());

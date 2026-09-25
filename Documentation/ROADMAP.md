@@ -44,7 +44,7 @@ that you can fly around.
 | 3 | `feat/logging`                  | ✅     | spdlog logging: levels, per-module categories, console and log file     |
 | 4 | `feat/window-gl-context`        | ✅     | SDL3 window, OpenGL 4.6 Core context, GLAD 2 loader, debug output, frame timer, animated clear color |
 | 5 | `feat/debug-overlay`            | ✅     | Dear ImGui overlay: version, GPU, FPS, frame time graph; keyboard state (`Input` module), F1 toggle |
-| 6 | `feat/textured-cube`            | ⏳     | Assets folder copied next to the executable; shaders, buffers, vertex array, texture — all with DSA and RAII wrappers; JetBrains Mono font for the debug overlay |
+| 6 | `feat/textured-cube`            | ✅     | Assets folder copied next to the executable, JetBrains Mono for the overlay; shaders, buffers, vertex array, texture with DSA and RAII wrappers; rotating textured cube with MVP matrices, depth test and face culling |
 | 7 | `feat/fly-camera`               | ⏳     | Mouse state, input actions and bindings (F1 becomes `ToggleDebugOverlay`), camera, mouse + WASD flight, first math unit tests |
 
 **Done when:** the game opens a window, shows a textured cube that can be
@@ -59,11 +59,15 @@ far:
 - **0.2** — decide collision approach: own AABB-vs-brush collision with a BVH;
   Jolt Physics only for queries if it becomes necessary. Learn TrenchBroom:
   game configuration, entity definitions, `.map` format, Z-up → Y-up.
+  Asset manager (see ARCHITECTURE.md, section 8): typed handles, a cache by
+  path, global and per-level groups, a fallback texture; `DemoScene` is
+  replaced by the high-level renderer.
 - **0.3** — asset pipeline decision: where models come from (generated,
   downloaded, bought) and how they are imported. Audio via miniaudio.
 - **0.4** — navmesh via Recast/Detour for ground enemies; flying enemies need
   a separate approach.
-- **0.5** — own lightmap compiler as part of the level compiler.
+- **0.5** — own lightmap compiler as part of the level compiler; sRGB textures
+  and framebuffer (gamma correction) together with lighting; shader hot reload.
 - **0.8** — every gameplay component must be serializable; keep this in mind
   from 0.2 onwards.
 

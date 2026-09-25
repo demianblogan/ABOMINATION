@@ -19,6 +19,8 @@ CMakeFiles/
 # --- Visual Studio Code / other editors ---
 .vscode/
 .idea/
+# glsld: GLSL language server extension for VS Code
+.glsld/
 
 # --- Runtime files written by the game ---
 /saves/

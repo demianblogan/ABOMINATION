@@ -33,4 +33,4 @@ the license check before a commercial release.
 |------|--------|--------|---------|----------|-------|
 | `Fonts/JetBrainsMonoRegular.ttf` | The JetBrains Mono Project Authors | [JetBrains Mono 2.304](https://github.com/JetBrains/JetBrainsMono/releases/tag/v2.304) | SIL Open Font License 1.1 | Renamed from `JetBrainsMono-Regular.ttf` | Debug overlay font. The license must ship with the font |
 | `Fonts/JetBrainsMonoLicense.txt` | The JetBrains Mono Project Authors | Same archive, `OFL.txt` | — | Renamed from `OFL.txt` | License text of the font |
-| `Textures/TestPattern.png` | Alone Bull | Drawn by a script (64×64) | Own work | — | Temporary test texture: colored quadrants, 8×8 checker, arrow pointing up to show orientation |
+| `Textures/Crate.png` | Alone Bull | Drawn by a script (64×64) | Own work | — | Wooden crate: frame, planks, diagonal brace, metal corners |

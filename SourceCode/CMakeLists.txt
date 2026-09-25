@@ -79,8 +79,13 @@ set(LIBRARY_SOURCES
     Renderer/ImGuiRendererBackend.cpp
     Renderer/OpenGLLoader.h
     Renderer/OpenGLLoader.cpp
+    Renderer/RenderAssets.h
     Renderer/RenderCommands.h
     Renderer/RenderCommands.cpp
+    Renderer/ShaderStore.h
+    Renderer/ShaderStore.cpp
+    Renderer/TextureStore.h
+    Renderer/TextureStore.cpp
 
     UI/DebugOverlay.h
     UI/DebugOverlay.cpp

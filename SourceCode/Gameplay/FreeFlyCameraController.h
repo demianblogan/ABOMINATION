@@ -43,12 +43,20 @@ namespace Abomination::Gameplay
     public:
         explicit FreeFlyCameraController(const FreeFlyCameraSettings& settings = {}) noexcept;
 
-        // Moves and turns the camera for one frame. deltaTime is the duration of the frame in seconds.
+        // Turning and moving are two separate calls, because they run at different rates:
+        //   UpdateRotation() - once per frame: the view must follow the mouse immediately, without waiting for a tick;
+        //   UpdateMovement() - once per simulation tick with the fixed tick duration (see Core::FixedTimestep).
+        //
         // Everything the controller works with is passed in, instead of being stored as references in the controller:
         // stored references would dangle after their owner is moved (Application is moved out of Application::Create),
         // the parameters show exactly what is read (const) and what is changed, and any camera can be driven by it.
-        void Update(Renderer::Camera& camera, const Input::ActionStates& actions, const Input::Mouse& mouse,
-                    float deltaTime) const noexcept;
+
+        // Turns the camera by the mouse movement of this frame while LookAroundMode is active.
+        void UpdateRotation(Renderer::Camera& camera, const Input::ActionStates& actions,
+                            const Input::Mouse& mouse) const noexcept;
+
+        // Moves the camera for one tick. deltaTime is the duration of the tick in seconds.
+        void UpdateMovement(Renderer::Camera& camera, const Input::ActionStates& actions, float deltaTime) const noexcept;
 
     private:
         FreeFlyCameraSettings m_settings;

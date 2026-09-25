@@ -1,6 +1,7 @@
 #include "UI/DebugOverlay.h"
 
 #include "Core/BuildConfiguration.h"
+#include "Core/FixedTimestep.h"
 #include "Core/FrameLimiter.h"
 #include "Core/FrameStatistics.h"
 #include "Core/Version.h"
@@ -218,19 +219,28 @@ namespace Abomination::UI
             ImGui::TextUnformatted(frameTimeText.c_str());
             ImGui::TextUnformatted(frameRateSettingsText.c_str());
 
+            // Simulation ticks per second: actually run / target. Both are equal at any FPS; fewer actual ticks mean the
+            // computer cannot simulate in real time and Core::FixedTimestep drops ticks, so the game runs slower.
+            const std::string simulationText =
+                std::format("Simulation: {:.0f} / {} ticks per second", frameStatistics.GetTicksPerSecond(),
+                            context.fixedTimestep.GetTicksPerSecond());
+            ImGui::TextUnformatted(simulationText.c_str());
+            ImGui::SetItemTooltip("Actual / target. Fewer actual ticks mean the simulation cannot keep up and the game "
+                                  "runs slower than real time.");
+
             // The graph: one point per frame, the height is the frame time. The samples are a ring buffer, so the
             // index of the oldest sample is passed as the offset: ImGui starts drawing from it and wraps around.
             // The "##" prefix hides the label: the text after it is used only as an ID.
             // The top of the graph fits the longest frame on the graph itself, which can be older than the interval
             // of the numbers above (the graph covers MaxSampleCount frames, the numbers only the last half second).
-            const std::span<const float> samples = frameStatistics.GetSamples();
-            const float longestSample = samples.empty() ? 0.0f : std::ranges::max(samples);
+            const int oldestSampleIndex = static_cast<int>(frameStatistics.GetOldestSampleIndex());
+            const std::span<const float> frameTimeSamples = frameStatistics.GetFrameTimeSamples();
+            const float longestSample = frameTimeSamples.empty() ? 0.0f : std::ranges::max(frameTimeSamples);
             const float graphTop = std::max(MinimumGraphTopFrameTime, longestSample);
             const std::string graphCaption = std::format("0 - {:.0f} ms", graphTop * MillisecondsPerSecond);
 
-            ImGui::PlotLines("##FrameTimes", samples.data(), static_cast<int>(samples.size()),
-                             static_cast<int>(frameStatistics.GetOldestSampleIndex()), graphCaption.c_str(), 0.0f, graphTop,
-                             ImVec2(GraphWidth, GraphHeight));
+            ImGui::PlotLines("##FrameTimes", frameTimeSamples.data(), static_cast<int>(frameTimeSamples.size()),
+                             oldestSampleIndex, graphCaption.c_str(), 0.0f, graphTop, ImVec2(GraphWidth, GraphHeight));
         }
         ImGui::End();
     }

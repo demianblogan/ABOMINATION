@@ -11,6 +11,7 @@
 
 namespace Abomination::Core
 {
+    class FixedTimestep;
     class FrameLimiter;
     class FrameStatistics;
 }
@@ -28,6 +29,7 @@ namespace Abomination::UI
     struct DebugOverlayContext
     {
         const Core::FrameStatistics& frameStatistics;
+        const Core::FixedTimestep& fixedTimestep;
         Platform::Window& window;
         Core::FrameLimiter& frameLimiter;
     };

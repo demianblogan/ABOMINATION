@@ -30,11 +30,12 @@ namespace Abomination::Gameplay
             m_devices.mouse.StartFrame();
         }
 
-        // Updates the actions from the devices and runs the controller for one frame.
+        // Updates the actions from the devices and runs the controller for one frame with exactly one tick of deltaTime.
         void RunFrame(float deltaTime)
         {
             m_actions.Update(m_devices, m_bindings);
-            m_controller.Update(m_camera, m_actions, m_devices.mouse, deltaTime);
+            m_controller.UpdateRotation(m_camera, m_actions, m_devices.mouse);
+            m_controller.UpdateMovement(m_camera, m_actions, deltaTime);
         }
 
         void ExpectPositionNear(glm::vec3 expected) const

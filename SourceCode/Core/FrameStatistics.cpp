@@ -4,30 +4,33 @@
 
 namespace Abomination::Core
 {
-    void FrameStatistics::AddFrame(float frameTime) noexcept
+    void FrameStatistics::AddFrame(float frameTime, int tickCount) noexcept
     {
         // The graph: write into the ring buffer, then move to the next slot; after the last slot go back to the first one.
-        m_samples[m_nextIndex] = frameTime;
+        m_frameTimeSamples[m_nextIndex] = frameTime;
         m_nextIndex = (m_nextIndex + 1) % MaxSampleCount;
         m_storedSampleCount = std::min(m_storedSampleCount + 1, MaxSampleCount);
 
         // The numbers to read: the frame joins the current interval.
         m_intervalTime += frameTime;
         ++m_intervalFrameCount;
+        m_intervalTickCount += tickCount;
         m_intervalLongestFrameTime = std::max(m_intervalLongestFrameTime, frameTime);
 
         if (m_intervalTime < ReportInterval)
             return;
 
         // The interval is over: its result becomes the new reported values, and a new interval starts empty.
-        // The interval can be a little longer than ReportInterval (it ends on a frame boundary); the average is still
-        // exact, because it divides the real total time by the real number of frames.
+        // The interval can be a little longer than ReportInterval (it ends on a frame boundary); the averages are still
+        // exact, because they divide by the real total time and the real number of frames.
         m_reportedAverageFrameTime = m_intervalTime / static_cast<float>(m_intervalFrameCount);
         m_reportedLongestFrameTime = m_intervalLongestFrameTime;
+        m_reportedTicksPerSecond = static_cast<float>(m_intervalTickCount) / m_intervalTime;
         m_wasFirstIntervalFinished = true;
 
         m_intervalTime = 0.0f;
         m_intervalFrameCount = 0;
+        m_intervalTickCount = 0;
         m_intervalLongestFrameTime = 0.0f;
     }
 
@@ -59,10 +62,21 @@ namespace Abomination::Core
         return m_intervalLongestFrameTime;
     }
 
-    std::span<const float> FrameStatistics::GetSamples() const noexcept
+    float FrameStatistics::GetTicksPerSecond() const noexcept
+    {
+        if (m_wasFirstIntervalFinished)
+            return m_reportedTicksPerSecond;
+
+        if (m_intervalTime <= 0.0f)
+            return 0.0f;
+
+        return static_cast<float>(m_intervalTickCount) / m_intervalTime;
+    }
+
+    std::span<const float> FrameStatistics::GetFrameTimeSamples() const noexcept
     {
         // Until the buffer is full, only its beginning contains real samples.
-        return std::span<const float>(m_samples.data(), m_storedSampleCount);
+        return std::span<const float>(m_frameTimeSamples.data(), m_storedSampleCount);
     }
 
     std::size_t FrameStatistics::GetOldestSampleIndex() const noexcept

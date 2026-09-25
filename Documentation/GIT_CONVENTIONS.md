@@ -149,7 +149,6 @@ It is filled in automatically when a PR is opened on GitHub.
 | **Summary**          | 1–3 sentences: what this PR does and why                   |
 | **Changes**          | Bullet list of the notable changes                         |
 | **How to test**      | Steps a reviewer follows to see the change working         |
-| **Screenshots**      | Images or GIFs for any visual change, otherwise remove it  |
 | **Milestone**        | The milestone the PR belongs to, e.g. `0.1 Foundation`     |
 | **Checklist**        | Build, tests, warnings and docs confirmed                  |
 
@@ -176,11 +175,19 @@ It is filled in automatically when a PR is opened on GitHub.
 **Releasing a milestone**
 
 1. All milestone branches are merged into `main` and CI is green.
-2. `Documentation/ROADMAP.md` is updated: the milestone is marked as done.
+2. The last branch of the milestone also prepares the release:
+   - 1–3 screenshots of the milestone go to
+     `Documentation/Screenshots/v<version>/` (for example
+     `Documentation/Screenshots/v0.1.0/RotatingCube.png`) and are shown in the
+     README;
+   - `Documentation/ROADMAP.md` and the README mark the milestone as done.
 3. An annotated tag is created on `main`:
    ```
    git tag -a v0.1.0 -m "Milestone 0.1 — Foundation"
    git push origin v0.1.0
    ```
-4. A GitHub Release is created from the tag with a short changelog and
+4. A GitHub Release is created from the tag with a short changelog and the
    screenshots.
+
+Pull requests do not contain screenshots: the pictures of every version are
+collected in the repository instead.

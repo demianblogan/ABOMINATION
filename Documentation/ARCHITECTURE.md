@@ -74,7 +74,10 @@ code the game runs. The executable is just an entry point.
 - The version exists only in `project(... VERSION ...)`; CMake generates
   `Core/Version.cpp` from it.
 - CI (`.github/workflows/CI.yml`) builds Debug and Release and runs all tests
-  for every pull request and every push to `main`.
+  for every pull request and every push to `main`. Release
+  (`.github/workflows/Release.yml`) turns a version tag into a draft GitHub
+  Release with the game package. Both set up vcpkg with the shared action
+  `.github/actions/SetUpVcpkg`.
 
 See [BUILDING.md](BUILDING.md) for instructions.
 

@@ -186,8 +186,20 @@ It is filled in automatically when a PR is opened on GitHub.
    git tag -a v0.1.0 -m "Milestone 0.1 — Foundation"
    git push origin v0.1.0
    ```
-4. A GitHub Release is created from the tag with a short changelog and the
-   screenshots.
+4. The pushed tag starts the **Release** workflow
+   (`.github/workflows/Release.yml`). It builds and tests Release, checks that
+   the tag matches `project(... VERSION ...)`, packages the game with
+   `cmake --install` into `Abomination-<version>-Windows-x64.zip` and creates a
+   **draft** GitHub Release with the archive attached.
+5. The draft is finished on GitHub (*Releases → Edit*): the title gets the
+   milestone name (`Abomination 0.1 — Foundation`), the generated list of pull
+   requests is turned into a short changelog, the screenshots are added. Then
+   **Publish release**.
+
+A failed workflow is fixed with a normal pull request; the tag is then moved
+to the fixed commit (`git tag -d`, `git push --delete origin`, tag again). The
+package of any branch can be checked without a release: *Actions → Release →
+Run workflow* keeps the archive as a workflow artifact.
 
 Pull requests do not contain screenshots: the pictures of every version are
 collected in the repository instead.

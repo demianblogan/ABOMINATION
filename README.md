@@ -15,6 +15,7 @@ built from scratch with modern C++ and OpenGL 4.6.**
 ![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
 <br>
 [![CI](https://img.shields.io/github/actions/workflow/status/demianblogan/Abomination/CI.yml?branch=main&style=flat-square&label=CI&logo=githubactions&logoColor=white)](https://github.com/demianblogan/Abomination/actions/workflows/CI.yml)
+[![Release](https://img.shields.io/github/v/release/demianblogan/Abomination?style=flat-square&label=release&color=brightgreen)](https://github.com/demianblogan/Abomination/releases/latest)
 [![Status](https://img.shields.io/badge/status-early_development-orange?style=flat-square)](Documentation/ROADMAP.md)
 [![Milestone](https://img.shields.io/badge/milestone-0.2_First_Steps-blue?style=flat-square)](Documentation/ROADMAP.md)
 [![License](https://img.shields.io/badge/license-PolyForm_Noncommercial_1.0-lightgrey?style=flat-square)](LICENSE.md)
@@ -23,6 +24,7 @@ built from scratch with modern C++ and OpenGL 4.6.**
 [Features](#-features) •
 [Screenshots](#-screenshots) •
 [Tech Stack](#%EF%B8%8F-tech-stack) •
+[Download](#%EF%B8%8F-download) •
 [Building](#-building) •
 [Controls](#-controls) •
 [Roadmap](#%EF%B8%8F-roadmap) •
@@ -99,6 +101,15 @@ the enemy AI — is built to be read and learned from.
 | Levels          | TrenchBroom + own level compiler                                           |
 | Build           | CMake · vcpkg · GitHub Actions                                             |
 | Testing         | GoogleTest · CTest                                                         |
+
+## ⬇️ Download
+
+Every finished milestone is published as a ready-to-play build:
+**[latest release](https://github.com/demianblogan/Abomination/releases/latest)**.
+Unzip the archive anywhere and run `Abomination.exe` — nothing else to install.
+
+Requires **Windows 10/11 (x64)** and a graphics card with **OpenGL 4.6**
+support (any GPU from the last ten years with up-to-date drivers).
 
 ## 🔨 Building
 

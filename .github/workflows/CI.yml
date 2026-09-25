@@ -29,34 +29,11 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      # vcpkg is cloned at exactly the builtin-baseline commit from vcpkg.json,
-      # so CI uses the same library versions as every developer machine.
+      # Local actions are read from the checked out repository, so this step must come after the checkout.
       - name: Set up vcpkg
-        shell: pwsh
-        run: |
-          $baseline = (Get-Content vcpkg.json -Raw | ConvertFrom-Json).'builtin-baseline'
-          $vcpkgRoot = Join-Path $env:RUNNER_TEMP 'vcpkg'
-          git init --quiet $vcpkgRoot
-          git -C $vcpkgRoot remote add origin https://github.com/microsoft/vcpkg.git
-          git -C $vcpkgRoot fetch --quiet --depth 1 origin $baseline
-          git -C $vcpkgRoot checkout --quiet FETCH_HEAD
-          & (Join-Path $vcpkgRoot 'bootstrap-vcpkg.bat') -disableMetrics
-          $cacheDir = Join-Path $env:RUNNER_TEMP 'vcpkg-binary-cache'
-          New-Item -ItemType Directory -Force $cacheDir | Out-Null
-          "VCPKG_ROOT=$vcpkgRoot" >> $env:GITHUB_ENV
-          "VCPKG_BINARY_SOURCES=clear;files,$cacheDir,readwrite" >> $env:GITHUB_ENV
-          "VCPKG_BINARY_CACHE_DIR=$cacheDir" >> $env:GITHUB_ENV
-
-      # Already built libraries are restored from the cache instead of being
-      # compiled again. The key changes when vcpkg.json (dependencies or
-      # baseline) changes.
-      - name: Cache vcpkg binaries
-        uses: actions/cache@v6
+        uses: ./.github/actions/SetUpVcpkg
         with:
-          path: ${{ env.VCPKG_BINARY_CACHE_DIR }}
-          key: vcpkg-${{ runner.os }}-${{ matrix.configuration }}-${{ hashFiles('vcpkg.json') }}
-          restore-keys: |
-            vcpkg-${{ runner.os }}-${{ matrix.configuration }}-
+          configuration: ${{ matrix.configuration }}
 
       - name: Configure
         run: cmake --preset windows-msvc

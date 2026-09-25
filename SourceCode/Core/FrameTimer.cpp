@@ -4,11 +4,11 @@
 
 namespace Abomination::Core
 {
-    FrameTimer::FrameTimer(Clock::time_point startTime) noexcept
+    FrameTimer::FrameTimer(TimePoint startTime) noexcept
         : m_previousFrameTime(startTime)
     {}
 
-    void FrameTimer::StartFrame(Clock::time_point now) noexcept
+    void FrameTimer::StartFrame(TimePoint now) noexcept
     {
         // The difference of two time points is a duration in clock ticks; duration<double> converts it to seconds.
         const double elapsedSeconds = std::chrono::duration<double>(now - m_previousFrameTime).count();

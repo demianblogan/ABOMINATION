@@ -1,6 +1,6 @@
 #pragma once
 
-#include <chrono>
+#include "Core/Clock.h"
 
 namespace Abomination::Core
 {
@@ -10,17 +10,14 @@ namespace Abomination::Core
     class FrameTimer
     {
     public:
-        // A monotonic clock: it never jumps back, even if the user changes the system time.
-        using Clock = std::chrono::steady_clock;
-
         // A frame longer than this (a breakpoint, a dragged window, a loading hitch) is counted as this long,
         // so the game does not try to catch up on seconds of lost time in one frame.
         static constexpr double MaxDeltaTime = 0.25;
 
-        explicit FrameTimer(Clock::time_point startTime) noexcept;
+        explicit FrameTimer(TimePoint startTime) noexcept;
 
         // Starts a new frame at the given time: measures the time passed since the previous frame.
-        void StartFrame(Clock::time_point now) noexcept;
+        void StartFrame(TimePoint now) noexcept;
 
         // Duration of the last frame in seconds, at most MaxDeltaTime. 0 before the first StartFrame().
         [[nodiscard]] float GetDeltaTime() const noexcept;
@@ -29,7 +26,7 @@ namespace Abomination::Core
         [[nodiscard]] double GetTotalTime() const noexcept;
 
     private:
-        Clock::time_point m_previousFrameTime;
+        TimePoint m_previousFrameTime;
         float m_deltaTime = 0.0f;
         double m_totalTime = 0.0;
     };

@@ -11,6 +11,7 @@
 
 namespace Abomination::Core
 {
+    class FrameLimiter;
     class FrameStatistics;
 }
 
@@ -21,7 +22,17 @@ namespace Abomination::Platform
 
 namespace Abomination::UI
 {
-    // Developer overlay drawn with Dear ImGui on top of the game: performance numbers and, later, debug tools.
+    // Everything the overlay shows or lets the developer change in one frame, gathered in one parameter of Draw().
+    // New debug tools add their systems here (the renderer, the entities, ...) instead of adding parameters to Draw().
+    // The overlay does not store these references: they are valid only during the Draw() call.
+    struct DebugOverlayContext
+    {
+        const Core::FrameStatistics& frameStatistics;
+        Platform::Window& window;
+        Core::FrameLimiter& frameLimiter;
+    };
+
+    // Developer overlay drawn with Dear ImGui on top of the game: a menu bar with debug windows and settings.
     // Not part of the game interface. Requires a window with loaded OpenGL functions. Move-only.
     class DebugOverlay
     {
@@ -32,7 +43,7 @@ namespace Abomination::UI
 
         // Builds the overlay for the current frame and draws it on top of what is already in the back buffer.
         // Must be called once per frame, after the game is drawn and before the buffers are swapped.
-        void Draw(const Core::FrameStatistics& frameStatistics);
+        void Draw(const DebugOverlayContext& context);
 
         // Shows the overlay if it is hidden and hides it if it is shown.
         void ToggleVisibility() noexcept;
@@ -43,8 +54,12 @@ namespace Abomination::UI
         DebugOverlay(ImGuiLibrary library, Platform::ImGuiPlatformBackend platformBackend,
                      Renderer::ImGuiRendererBackend rendererBackend, std::string GPUName) noexcept;
 
+        // The bar along the top edge of the game window: the View menu opens and closes debug windows,
+        // the Settings menu changes settings of the game.
+        void DrawMainMenuBar(const DebugOverlayContext& context);
+
         // The small window in the top-left corner: version, GPU, FPS, frame time and its graph.
-        void DrawStatisticsWindow(const Core::FrameStatistics& frameStatistics) const;
+        void DrawPerformanceWindow(const DebugOverlayContext& context);
 
         // Members are destroyed in reverse order of declaration: both backends first, then the ImGui context they use.
         ImGuiLibrary m_library;
@@ -56,5 +71,8 @@ namespace Abomination::UI
 
         // Visible from the start in Debug builds, where the numbers are needed most; F1 toggles it in any build.
         bool m_isVisible = Core::IsDebugBuild;
+
+        // Which debug windows are open. Changed by the View menu and by the close button of each window.
+        bool m_isPerformanceWindowOpen = true;
     };
 }

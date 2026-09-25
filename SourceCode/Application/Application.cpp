@@ -4,6 +4,7 @@
 #include "Core/FrameStatistics.h"
 #include "Core/FrameTimer.h"
 #include "Core/Log.h"
+#include "Platform/SystemServices.h"
 #include "Renderer/DebugOutput.h"
 #include "Renderer/OpenGLLoader.h"
 #include "Renderer/RenderCommands.h"
@@ -71,13 +72,14 @@ namespace Abomination
     {
         Core::Log::Write(LogCategory::Core, LogLevel::Info, "Main loop started");
 
-        Core::FrameTimer frameTimer(Core::FrameTimer::Clock::now());
+        Core::FrameTimer frameTimer(Core::Clock::now());
         Core::FrameStatistics frameStatistics;
 
         // One iteration is one frame.
         while (!m_window.IsCloseRequested())
         {
-            frameTimer.StartFrame(Core::FrameTimer::Clock::now());
+            const Core::TimePoint frameStartTime = Core::Clock::now();
+            frameTimer.StartFrame(frameStartTime);
             frameStatistics.AddFrame(frameTimer.GetDeltaTime());
 
             // First the devices get this frame's input, then the actions are calculated from them.
@@ -103,9 +105,17 @@ namespace Abomination
             m_demoScene.Draw(frameTimer.GetTotalTime(), m_camera, m_window.GetWidthInPixels(), m_window.GetHeightInPixels());
 
             // The overlay is drawn last, on top of the game.
-            m_debugOverlay.Draw(frameStatistics);
+            m_debugOverlay.Draw({
+                .frameStatistics = frameStatistics,
+                .window = m_window,
+                .frameLimiter = m_frameLimiter,
+            });
 
             m_window.SwapBuffers();
+
+            // With an FPS limit, the frame waits here until it has lasted 1 / limit seconds. The next frame then starts
+            // right on time, and its measured delta time includes this wait.
+            Platform::SleepPrecisely(m_frameLimiter.GetWaitTime(frameStartTime, Core::Clock::now()));
         }
 
         Core::Log::Write(LogCategory::Core, LogLevel::Info, "Main loop finished after {:.1f} seconds",

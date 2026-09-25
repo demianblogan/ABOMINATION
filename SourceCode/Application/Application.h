@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/FrameLimiter.h"
 #include "Gameplay/FreeFlyCameraController.h"
 #include "Input/ActionStates.h"
 #include "Input/InputBindings.h"
@@ -49,5 +50,8 @@ namespace Abomination
         // Which keys and buttons trigger which actions, and the state of every action for the current frame.
         Input::InputBindings m_inputBindings = Input::InputBindings::CreateDefault();
         Input::ActionStates m_actionStates;
+
+        // Keeps the frame rate at or below the limit chosen in the debug overlay (no limit by default).
+        Core::FrameLimiter m_frameLimiter;
     };
 }

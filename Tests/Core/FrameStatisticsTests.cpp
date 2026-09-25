@@ -31,6 +31,45 @@ namespace Abomination::Core
         EXPECT_NEAR(statistics.GetAverageFramesPerSecond(), 50.0f, 0.001f);
     }
 
+    // The following tests use powers of two (0.25, 0.125, 0.0625): they are exact in float, so the interval ends
+    // exactly on the expected frame. ReportInterval is 0.5 s.
+    TEST(FrameStatistics, NumbersChangeOnlyWhenIntervalEnds)
+    {
+        FrameStatistics statistics;
+
+        // 4 x 0.125 s = 0.5 s: the first interval ends with an average of 0.125 s (8 FPS).
+        for (int frame = 0; frame < 4; ++frame)
+            statistics.AddFrame(0.125f);
+        EXPECT_FLOAT_EQ(statistics.GetAverageFrameTime(), 0.125f);
+
+        // Faster frames do not change the numbers until the next interval ends...
+        for (int frame = 0; frame < 7; ++frame)
+            statistics.AddFrame(0.0625f);
+        EXPECT_FLOAT_EQ(statistics.GetAverageFrameTime(), 0.125f);
+        EXPECT_FLOAT_EQ(statistics.GetAverageFramesPerSecond(), 8.0f);
+
+        // ...which happens on the 8th frame: 8 x 0.0625 s = 0.5 s.
+        statistics.AddFrame(0.0625f);
+        EXPECT_FLOAT_EQ(statistics.GetAverageFrameTime(), 0.0625f);
+        EXPECT_FLOAT_EQ(statistics.GetAverageFramesPerSecond(), 16.0f);
+    }
+
+    TEST(FrameStatistics, LongestFrameIsForgottenInNextInterval)
+    {
+        FrameStatistics statistics;
+
+        // First interval: 0.25 + 0.125 + 0.125 = 0.5 s, the longest frame is 0.25 s.
+        statistics.AddFrame(0.25f);
+        statistics.AddFrame(0.125f);
+        statistics.AddFrame(0.125f);
+        EXPECT_FLOAT_EQ(statistics.GetLongestFrameTime(), 0.25f);
+
+        // Second interval: only 0.125 s frames, so the long frame is no longer reported.
+        for (int frame = 0; frame < 4; ++frame)
+            statistics.AddFrame(0.125f);
+        EXPECT_FLOAT_EQ(statistics.GetLongestFrameTime(), 0.125f);
+    }
+
     TEST(FrameStatistics, FindsLongestFrame)
     {
         FrameStatistics statistics;

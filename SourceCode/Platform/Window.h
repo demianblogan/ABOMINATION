@@ -51,6 +51,13 @@ namespace Abomination::Platform
         // it moved, without stopping at the edges of the screen. Used for looking around with the mouse.
         void SetRelativeMouseMode(bool isEnabled);
 
+        // Turns V-Sync on or off (see WindowSettings::isVSyncEnabled). Takes effect from the next SwapBuffers(),
+        // the window does not have to be created again. The graphics driver settings can force V-Sync on or off
+        // regardless of this call.
+        void SetVSyncEnabled(bool isEnabled);
+
+        [[nodiscard]] bool IsVSyncEnabled() const noexcept;
+
         [[nodiscard]] bool IsCloseRequested() const noexcept;
 
         // Size of the drawable area in pixels. OpenGL works in pixels, so these are the values for glViewport.
@@ -70,6 +77,7 @@ namespace Abomination::Platform
         SDL_Window* m_window = nullptr;
         SDL_GLContextState* m_context = nullptr;
         bool m_isCloseRequested = false;
+        bool m_isVSyncEnabled = false;
         int m_widthInPixels = 0;
         int m_heightInPixels = 0;
     };

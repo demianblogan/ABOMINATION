@@ -1,30 +1,45 @@
 #include "Core/FrameStatistics.h"
 
 #include <algorithm>
-#include <numeric>
 
 namespace Abomination::Core
 {
     void FrameStatistics::AddFrame(float frameTime) noexcept
     {
+        // The graph: write into the ring buffer, then move to the next slot; after the last slot go back to the first one.
         m_samples[m_nextIndex] = frameTime;
-
-        // Move to the next slot; after the last slot go back to the first one (the "ring").
         m_nextIndex = (m_nextIndex + 1) % MaxSampleCount;
         m_storedSampleCount = std::min(m_storedSampleCount + 1, MaxSampleCount);
+
+        // The numbers to read: the frame joins the current interval.
+        m_intervalTime += frameTime;
+        ++m_intervalFrameCount;
+        m_intervalLongestFrameTime = std::max(m_intervalLongestFrameTime, frameTime);
+
+        if (m_intervalTime < ReportInterval)
+            return;
+
+        // The interval is over: its result becomes the new reported values, and a new interval starts empty.
+        // The interval can be a little longer than ReportInterval (it ends on a frame boundary); the average is still
+        // exact, because it divides the real total time by the real number of frames.
+        m_reportedAverageFrameTime = m_intervalTime / static_cast<float>(m_intervalFrameCount);
+        m_reportedLongestFrameTime = m_intervalLongestFrameTime;
+        m_wasFirstIntervalFinished = true;
+
+        m_intervalTime = 0.0f;
+        m_intervalFrameCount = 0;
+        m_intervalLongestFrameTime = 0.0f;
     }
 
     float FrameStatistics::GetAverageFrameTime() const noexcept
     {
-        if (m_storedSampleCount == 0)
+        if (m_wasFirstIntervalFinished)
+            return m_reportedAverageFrameTime;
+
+        if (m_intervalFrameCount == 0)
             return 0.0f;
 
-        // 120 additions per call are negligible. Summing again every time is simpler and more precise than keeping
-        // a running sum, which would slowly collect float rounding errors over hours of play.
-        const std::span<const float> samples = GetSamples();
-        const float sum = std::accumulate(samples.begin(), samples.end(), 0.0f);
-
-        return sum / static_cast<float>(samples.size());
+        return m_intervalTime / static_cast<float>(m_intervalFrameCount);
     }
 
     float FrameStatistics::GetAverageFramesPerSecond() const noexcept
@@ -38,12 +53,10 @@ namespace Abomination::Core
 
     float FrameStatistics::GetLongestFrameTime() const noexcept
     {
-        if (m_storedSampleCount == 0)
-            return 0.0f;
+        if (m_wasFirstIntervalFinished)
+            return m_reportedLongestFrameTime;
 
-        const std::span<const float> samples = GetSamples();
-
-        return *std::max_element(samples.begin(), samples.end());
+        return m_intervalLongestFrameTime;
     }
 
     std::span<const float> FrameStatistics::GetSamples() const noexcept

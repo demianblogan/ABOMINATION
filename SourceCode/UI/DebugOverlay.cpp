@@ -1,13 +1,16 @@
 #include "UI/DebugOverlay.h"
 
 #include "Core/BuildConfiguration.h"
+#include "Core/FrameLimiter.h"
 #include "Core/FrameStatistics.h"
 #include "Core/Version.h"
+#include "Platform/Window.h"
 #include "Renderer/OpenGLLoader.h"
 
 #include <imgui.h>
 
 #include <algorithm>
+#include <array>
 #include <format>
 #include <span>
 #include <string_view>
@@ -17,11 +20,11 @@ namespace Abomination::UI
 {
     namespace
     {
-        // Distance from the top-left corner of the game window to the statistics window, in pixels.
-        constexpr float StatisticsWindowMargin = 10.0f;
+        // Distance from the edges of the game window (below the menu bar) to the performance window, in pixels.
+        constexpr float PerformanceWindowMargin = 10.0f;
 
-        // Opacity of the statistics window background: 0 is fully transparent, 1 is opaque.
-        constexpr float StatisticsWindowBackgroundAlpha = 0.6f;
+        // Opacity of the performance window background: 0 is fully transparent, 1 is opaque.
+        constexpr float PerformanceWindowBackgroundAlpha = 0.6f;
 
         // Size of the frame time graph in pixels.
         constexpr float GraphWidth = 400.0f;
@@ -33,15 +36,33 @@ namespace Abomination::UI
 
         constexpr float MillisecondsPerSecond = 1000.0f;
 
-        // The window has a title bar and can be collapsed by the arrow in it, but it cannot be moved:
+        // The limits offered in Settings > Display > FPS limit; 0 means no limit. They are chosen for testing, not for
+        // players: with the simulation running at 60 ticks per second,
+        //   15, 30 - a slow computer: 4 and 2 ticks in every frame;
+        //   60     - exactly 1 tick in every frame;
+        //   120    - an even pattern: 0, 1, 0, 1 ticks per frame;
+        //   144    - an uneven pattern (0, 0, 1, 0, 1, ...), where movement stutters without interpolation;
+        //   240    - common fast monitors, many frames without a tick.
+        constexpr std::array FramesPerSecondLimits{0, 15, 30, 60, 120, 144, 240};
+
+        // The window has a title bar with a close button and can be collapsed by the arrow in it, but it cannot be moved:
         //   AlwaysAutoResize   - the size always fits the contents (so it cannot be resized by hand either);
         //   NoMove             - stays pinned to the corner;
         //   NoSavedSettings    - its position and state are not written anywhere;
         //   NoFocusOnAppearing - does not take the keyboard focus from the game when it appears;
         //   NoNav              - is skipped by keyboard and gamepad navigation between ImGui windows.
-        constexpr ImGuiWindowFlags StatisticsWindowFlags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove |
-                                                           ImGuiWindowFlags_NoSavedSettings |
-                                                           ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+        constexpr ImGuiWindowFlags PerformanceWindowFlags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove |
+                                                            ImGuiWindowFlags_NoSavedSettings |
+                                                            ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+
+        // "Unlimited" or "144 FPS": the text of a frame rate limit in the menu and in the performance window.
+        std::string FormatFramesPerSecondLimit(int maxFramesPerSecond)
+        {
+            if (maxFramesPerSecond == 0)
+                return "Unlimited";
+
+            return std::format("{} FPS", maxFramesPerSecond);
+        }
     }
 
     std::expected<DebugOverlay, std::string> DebugOverlay::Create(const Platform::Window& window,
@@ -74,7 +95,7 @@ namespace Abomination::UI
         , m_GPUName(std::move(GPUName))
     {}
 
-    void DebugOverlay::Draw(const Core::FrameStatistics& frameStatistics)
+    void DebugOverlay::Draw(const DebugOverlayContext& context)
     {
         // 1. Start the frame: the backends pass ImGui the window size, the time and the input of this frame.
         m_rendererBackend.StartFrame();
@@ -86,7 +107,12 @@ namespace Abomination::UI
         //    input and the time, so it is in a consistent state when the overlay is shown again. An empty frame costs
         //    practically nothing.
         if (m_isVisible)
-            DrawStatisticsWindow(frameStatistics);
+        {
+            DrawMainMenuBar(context);
+
+            if (m_isPerformanceWindowOpen)
+                DrawPerformanceWindow(context);
+        }
 
         // 3. ImGui turns the recorded windows into lists of triangles, and the OpenGL backend draws them.
         ImGui::Render();
@@ -103,18 +129,72 @@ namespace Abomination::UI
         return m_isVisible;
     }
 
-    void DebugOverlay::DrawStatisticsWindow(const Core::FrameStatistics& frameStatistics) const
+    void DebugOverlay::DrawMainMenuBar(const DebugOverlayContext& context)
     {
+        // BeginMainMenuBar() creates a bar along the top edge of the screen; BeginMenu() adds a menu to it that opens
+        // on click. Both return true only while they are visible/open, and only then must their End...() be called.
+        if (!ImGui::BeginMainMenuBar())
+            return;
+
+        if (ImGui::BeginMenu("View"))
+        {
+            // MenuItem(label, shortcut, bool*) shows a check mark and flips the bool when clicked.
+            ImGui::MenuItem("Performance", nullptr, &m_isPerformanceWindowOpen);
+            ImGui::EndMenu();
+        }
+
+        // Settings are grouped into submenus the same way as the options menu of the game will be (Settings > Display, ...).
+        // A BeginMenu() inside an open menu becomes a submenu.
+        if (ImGui::BeginMenu("Settings"))
+        {
+            if (ImGui::BeginMenu("Display"))
+            {
+                // Here MenuItem(label, shortcut, bool) only shows the check mark and returns true when clicked,
+                // because the state belongs to the window, not to the overlay.
+                const bool isVSyncEnabled = context.window.IsVSyncEnabled();
+                if (ImGui::MenuItem("V-Sync", nullptr, isVSyncEnabled))
+                    context.window.SetVSyncEnabled(!isVSyncEnabled);
+                ImGui::SetItemTooltip("Waits for the monitor refresh: no tearing, but FPS never exceeds the refresh rate.");
+
+                // One item per limit, the current one checked (like radio buttons).
+                if (ImGui::BeginMenu("FPS limit"))
+                {
+                    for (const int limit : FramesPerSecondLimits)
+                    {
+                        const bool isCurrentLimit = context.frameLimiter.GetMaxFramesPerSecond() == limit;
+                        if (ImGui::MenuItem(FormatFramesPerSecondLimit(limit).c_str(), nullptr, isCurrentLimit))
+                            context.frameLimiter.SetMaxFramesPerSecond(limit);
+                    }
+
+                    ImGui::EndMenu();
+                }
+
+                ImGui::EndMenu();
+            }
+
+            ImGui::EndMenu();
+        }
+
+        ImGui::EndMainMenuBar();
+    }
+
+    void DebugOverlay::DrawPerformanceWindow(const DebugOverlayContext& context)
+    {
+        // The window is placed below the menu bar, whose height is the height of one line of ImGui widgets.
         // Both calls only affect the next Begin(). ImGuiCond_Always applies the position every frame,
         // so the window stays pinned to the corner.
-        ImGui::SetNextWindowPos(ImVec2(StatisticsWindowMargin, StatisticsWindowMargin), ImGuiCond_Always);
-        ImGui::SetNextWindowBgAlpha(StatisticsWindowBackgroundAlpha);
+        const ImVec2 position(PerformanceWindowMargin, ImGui::GetFrameHeight() + PerformanceWindowMargin);
+        ImGui::SetNextWindowPos(position, ImGuiCond_Always);
+        ImGui::SetNextWindowBgAlpha(PerformanceWindowBackgroundAlpha);
 
         // The title is shown in the title bar; ImGui also identifies windows by it, so it must be unique.
+        // Passing the bool adds a close button to the title bar, which sets it to false.
         // Begin() returns false when the window is collapsed or fully clipped: then its contents are skipped,
         // but End() must still be called.
-        if (ImGui::Begin("Statistics", nullptr, StatisticsWindowFlags))
+        if (ImGui::Begin("Performance", &m_isPerformanceWindowOpen, PerformanceWindowFlags))
         {
+            const Core::FrameStatistics& frameStatistics = context.frameStatistics;
+
             const std::string_view buildConfiguration = Core::IsDebugBuild ? "Debug" : "Release";
             const std::string versionText =
                 std::format("Abomination {} ({})", Core::GetGameVersionString(), buildConfiguration);
@@ -131,14 +211,21 @@ namespace Abomination::UI
             const std::string frameTimeText =
                 std::format("Frame time: {:.2f} ms (longest {:.2f} ms)", averageFrameTime * MillisecondsPerSecond,
                             longestFrameTime * MillisecondsPerSecond);
+            const std::string frameRateSettingsText =
+                std::format("V-Sync: {}, FPS limit: {}", context.window.IsVSyncEnabled() ? "on" : "off",
+                            FormatFramesPerSecondLimit(context.frameLimiter.GetMaxFramesPerSecond()));
             ImGui::TextUnformatted(framesPerSecondText.c_str());
             ImGui::TextUnformatted(frameTimeText.c_str());
+            ImGui::TextUnformatted(frameRateSettingsText.c_str());
 
             // The graph: one point per frame, the height is the frame time. The samples are a ring buffer, so the
             // index of the oldest sample is passed as the offset: ImGui starts drawing from it and wraps around.
             // The "##" prefix hides the label: the text after it is used only as an ID.
+            // The top of the graph fits the longest frame on the graph itself, which can be older than the interval
+            // of the numbers above (the graph covers MaxSampleCount frames, the numbers only the last half second).
             const std::span<const float> samples = frameStatistics.GetSamples();
-            const float graphTop = std::max(MinimumGraphTopFrameTime, longestFrameTime);
+            const float longestSample = samples.empty() ? 0.0f : std::ranges::max(samples);
+            const float graphTop = std::max(MinimumGraphTopFrameTime, longestSample);
             const std::string graphCaption = std::format("0 - {:.0f} ms", graphTop * MillisecondsPerSecond);
 
             ImGui::PlotLines("##FrameTimes", samples.data(), static_cast<int>(samples.size()),

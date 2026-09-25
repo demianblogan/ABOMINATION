@@ -5,6 +5,7 @@
 #include "Input/InputDevices.h"
 #include "Platform/SDLLibrary.h"
 #include "Platform/Window.h"
+#include "Renderer/Camera.h"
 #include "Renderer/DemoScene.h"
 #include "UI/DebugOverlay.h"
 
@@ -35,6 +36,9 @@ namespace Abomination
         Platform::SDLLibrary m_SDLLibrary;
         Platform::Window m_window;
         Renderer::DemoScene m_demoScene;
+
+        // The camera the scene is drawn through.
+        Renderer::Camera m_camera;
         UI::DebugOverlay m_debugOverlay;
 
         // State of the keyboard and the mouse for the current frame: the window fills it, the game reads it.

@@ -14,6 +14,8 @@ set(TEST_SOURCES
     Input/InputBindingsTests.cpp
     Input/KeyboardTests.cpp
     Input/MouseTests.cpp
+
+    Renderer/CameraTests.cpp
 )
 
 add_executable(AbominationTests

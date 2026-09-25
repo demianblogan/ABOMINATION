@@ -51,6 +51,8 @@ set(LIBRARY_SOURCES
     Platform/Window.h
     Platform/Window.cpp
 
+    Renderer/Camera.h
+    Renderer/Camera.cpp
     Renderer/DebugOutput.h
     Renderer/DebugOutput.cpp
     Renderer/DemoScene.h

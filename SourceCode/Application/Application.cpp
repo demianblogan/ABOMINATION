@@ -8,6 +8,7 @@
 #include "Renderer/OpenGLLoader.h"
 #include "Renderer/RenderCommands.h"
 
+#include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 
 #include <utility>
@@ -21,6 +22,9 @@ namespace Abomination
     {
         // A neutral dark gray, so the colors of the scene are easy to judge.
         constexpr glm::vec4 BackgroundColor{0.12f, 0.12f, 0.13f, 1.0f};
+
+        // The camera starts 2.5 meters in front of the cube (the cube is at the origin, the camera looks along -Z).
+        constexpr glm::vec3 InitialCameraPosition{0.0f, 0.0f, 2.5f};
     }
 
     std::expected<Application, std::string> Application::Create(const std::filesystem::path& assetsDirectory)
@@ -59,7 +63,9 @@ namespace Abomination
         , m_window(std::move(window))
         , m_demoScene(std::move(demoScene))
         , m_debugOverlay(std::move(debugOverlay))
-    {}
+    {
+        m_camera.SetPosition(InitialCameraPosition);
+    }
 
     int Application::Run()
     {
@@ -92,7 +98,7 @@ namespace Abomination
 
             Renderer::SetViewport(m_window.GetWidthInPixels(), m_window.GetHeightInPixels());
             Renderer::ClearFrame(BackgroundColor);
-            m_demoScene.Draw(frameTimer.GetTotalTime(), m_window.GetWidthInPixels(), m_window.GetHeightInPixels());
+            m_demoScene.Draw(frameTimer.GetTotalTime(), m_camera, m_window.GetWidthInPixels(), m_window.GetHeightInPixels());
 
             // The overlay is drawn last, on top of the game.
             m_debugOverlay.Draw(frameStatistics);

@@ -21,6 +21,8 @@ set(LIBRARY_SOURCES
     Core/Clock.h
     Core/FileSystem.h
     Core/FileSystem.cpp
+    Core/FixedTimestep.h
+    Core/FixedTimestep.cpp
     Core/FrameLimiter.h
     Core/FrameLimiter.cpp
     Core/FrameStatistics.h

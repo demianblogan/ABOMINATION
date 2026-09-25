@@ -10,8 +10,6 @@
 
 #include <glm/vec4.hpp>
 
-#include <cmath>
-#include <numbers>
 #include <utility>
 
 namespace Abomination
@@ -21,22 +19,8 @@ namespace Abomination
 
     namespace
     {
-        // A dark color that slowly goes around the color wheel: red, green and blue follow the same sine wave,
-        // shifted by a third of a period from each other. One full cycle takes about 12.5 seconds.
-        glm::vec4 CalculateBackgroundColor(double time)
-        {
-            constexpr double Speed = 0.5;      // Radians per second
-            constexpr double Middle = 0.2;     // Average brightness of each channel
-            constexpr double Amplitude = 0.15; // How far a channel goes up and down from the middle
-            constexpr double ThirdOfCircle = 2.0 * std::numbers::pi / 3.0;
-
-            const double angle = time * Speed;
-            const double red = Middle + Amplitude * std::sin(angle);
-            const double green = Middle + Amplitude * std::sin(angle + ThirdOfCircle);
-            const double blue = Middle + Amplitude * std::sin(angle + 2.0 * ThirdOfCircle);
-
-            return glm::vec4(red, green, blue, 1.0);
-        }
+        // A neutral dark gray, so the colors of the scene are easy to judge.
+        constexpr glm::vec4 BackgroundColor{0.12f, 0.12f, 0.13f, 1.0f};
     }
 
     std::expected<Application, std::string> Application::Create(const std::filesystem::path& assetsDirectory)
@@ -90,15 +74,22 @@ namespace Abomination
             frameTimer.StartFrame(Core::FrameTimer::Clock::now());
             frameStatistics.AddFrame(frameTimer.GetDeltaTime());
 
-            m_window.ProcessEvents(m_keyboard);
+            m_window.ProcessEvents(m_inputDevices);
 
             // A direct key check for now. When the action layer of input appears (the fly camera branch), this becomes
             // the ToggleDebugOverlay action, and the key is taken from the bindings instead of being written here.
-            if (m_keyboard.WasKeyPressed(Input::Key::F1))
+            if (m_inputDevices.keyboard.WasKeyPressed(Input::Key::F1))
                 m_debugOverlay.ToggleVisibility();
 
+            // While the right mouse button is held, the mouse is captured for looking around (used by the fly camera,
+            // like in the Unity and Unreal editors). The mode is switched only when the button changes, not every frame.
+            if (m_inputDevices.mouse.WasButtonPressed(Input::MouseButton::Right))
+                m_window.SetRelativeMouseMode(true);
+            if (m_inputDevices.mouse.WasButtonReleased(Input::MouseButton::Right))
+                m_window.SetRelativeMouseMode(false);
+
             Renderer::SetViewport(m_window.GetWidthInPixels(), m_window.GetHeightInPixels());
-            Renderer::ClearFrame(CalculateBackgroundColor(frameTimer.GetTotalTime()));
+            Renderer::ClearFrame(BackgroundColor);
             m_demoScene.Draw(frameTimer.GetTotalTime(), m_window.GetWidthInPixels(), m_window.GetHeightInPixels());
 
             // The overlay is drawn last, on top of the game.

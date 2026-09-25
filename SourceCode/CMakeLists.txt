@@ -31,8 +31,11 @@ set(LIBRARY_SOURCES
     Core/Version.h
     Core/Version.cpp.in
 
+    Input/InputDevices.h
     Input/Keyboard.h
     Input/Keyboard.cpp
+    Input/Mouse.h
+    Input/Mouse.cpp
 
     Platform/ImGuiPlatformBackend.h
     Platform/ImGuiPlatformBackend.cpp

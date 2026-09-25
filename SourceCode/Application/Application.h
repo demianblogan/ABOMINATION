@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Input/Keyboard.h"
+#include "Input/InputDevices.h"
 #include "Platform/SDLLibrary.h"
 #include "Platform/Window.h"
 #include "Renderer/DemoScene.h"
@@ -35,7 +35,7 @@ namespace Abomination
         Renderer::DemoScene m_demoScene;
         UI::DebugOverlay m_debugOverlay;
 
-        // State of the keyboard for the current frame: the window fills it, the game reads it.
-        Input::Keyboard m_keyboard;
+        // State of the keyboard and the mouse for the current frame: the window fills it, the game reads it.
+        Input::InputDevices m_inputDevices;
     };
 }

@@ -11,6 +11,7 @@ set(TEST_SOURCES
     Core/VersionTests.cpp
 
     Input/KeyboardTests.cpp
+    Input/MouseTests.cpp
 )
 
 add_executable(AbominationTests

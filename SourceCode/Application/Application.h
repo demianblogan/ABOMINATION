@@ -10,6 +10,7 @@
 #include "Platform/Window.h"
 #include "Renderer/Camera.h"
 #include "Renderer/DemoScene.h"
+#include "Renderer/RenderAssets.h"
 #include "UI/DebugOverlay.h"
 
 #include <glm/vec3.hpp>
@@ -38,8 +39,8 @@ namespace Abomination
         [[nodiscard]] int Run();
 
     private:
-        Application(Platform::SDLLibrary SDLLibrary, Platform::Window window, Renderer::DemoScene demoScene,
-                    UI::DebugOverlay debugOverlay) noexcept;
+        Application(Platform::SDLLibrary SDLLibrary, Platform::Window window, Renderer::RenderAssets renderAssets,
+                    Renderer::DemoScene demoScene, UI::DebugOverlay debugOverlay) noexcept;
 
         // The two kinds of updates of the main loop, named like in Unity:
         //   Update()      - once per frame: what must react immediately and does not depend on time
@@ -57,10 +58,13 @@ namespace Abomination
         // The camera the frame is drawn through: m_camera with its position interpolated between the last two ticks.
         [[nodiscard]] Renderer::Camera GetInterpolatedCamera() const;
 
-        // Members are destroyed in reverse order of declaration: the overlay and the scene first (they use OpenGL),
-        // then the window, then SDL, which the window needs.
+        // Members are destroyed in reverse order of declaration: the overlay, the scene and the assets first (they use
+        // OpenGL), then the window, then SDL, which the window needs.
         Platform::SDLLibrary m_SDLLibrary;
         Platform::Window m_window;
+
+        // Every graphics asset of the game, loaded once. Declared before the scene, which keeps handles to them.
+        Renderer::RenderAssets m_renderAssets;
         Renderer::DemoScene m_demoScene;
 
         // The camera the scene is drawn through, and the controller that flies it.

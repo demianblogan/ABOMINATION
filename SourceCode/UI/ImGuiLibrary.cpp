@@ -39,7 +39,8 @@ namespace Abomination::UI
         }
     }
 
-    std::expected<ImGuiLibrary, std::string> ImGuiLibrary::Initialize(const std::filesystem::path& fontPath)
+    std::expected<ImGuiLibrary, std::string> ImGuiLibrary::Initialize(const std::filesystem::path& fontPath,
+                                                                     std::filesystem::path settingsPath)
     {
         // Checks that the ImGui headers we compile with match the compiled ImGui library.
         IMGUI_CHECKVERSION();
@@ -47,8 +48,13 @@ namespace Abomination::UI
         if (ImGui::CreateContext() == nullptr)
             return std::unexpected("Failed to create the ImGui context");
 
-        // By default ImGui saves window positions to imgui.ini in the current folder. Not needed for a debug overlay.
+        // Window settings. By default ImGui reads and writes imgui.ini by itself, through IniFilename: a plain
+        // const char* it keeps and uses at any time. Our ImGuiLibrary is moved (into DebugOverlay, then into
+        // Application), and a pointer into a moved string could be left pointing at freed memory. So ImGui's own file
+        // handling is turned off (nullptr), and the file is loaded here and saved by SaveSettingsIfChanged() instead.
         ImGui::GetIO().IniFilename = nullptr;
+        if (std::filesystem::exists(settingsPath))
+            ImGui::LoadIniSettingsFromDisk(settingsPath.string().c_str());
 
         AddDebugUIFont(fontPath);
         ImGui::GetStyle().FontSizeBase = DebugUIFontSize;
@@ -57,14 +63,19 @@ namespace Abomination::UI
 
         Core::Log::Write(LogCategory::UI, LogLevel::Info, "Dear ImGui {} initialized", IMGUI_VERSION);
 
-        ImGuiLibrary library;
+        ImGuiLibrary library(std::move(settingsPath));
         library.m_isActive = true;
 
         return library;
     }
 
+    ImGuiLibrary::ImGuiLibrary(std::filesystem::path settingsPath) noexcept
+        : m_settingsPath(std::move(settingsPath))
+    {}
+
     ImGuiLibrary::ImGuiLibrary(ImGuiLibrary&& other) noexcept
-        : m_isActive(std::exchange(other.m_isActive, false))
+        : m_settingsPath(std::move(other.m_settingsPath))
+        , m_isActive(std::exchange(other.m_isActive, false))
     {}
 
     ImGuiLibrary& ImGuiLibrary::operator=(ImGuiLibrary&& other) noexcept
@@ -72,8 +83,12 @@ namespace Abomination::UI
         if (this != &other)
         {
             if (m_isActive)
+            {
+                SaveSettings();
                 ImGui::DestroyContext();
+            }
 
+            m_settingsPath = std::move(other.m_settingsPath);
             m_isActive = std::exchange(other.m_isActive, false);
         }
 
@@ -82,7 +97,29 @@ namespace Abomination::UI
 
     ImGuiLibrary::~ImGuiLibrary()
     {
+        // Changes made during the last few seconds are not saved yet (ImGui waits before reporting them), so the
+        // settings are written once more before the context disappears.
         if (m_isActive)
+        {
+            SaveSettings();
             ImGui::DestroyContext();
+        }
+    }
+
+    void ImGuiLibrary::SaveSettingsIfChanged()
+    {
+        // ImGui sets WantSaveIniSettings (only while IniFilename is nullptr) some seconds after a window was moved,
+        // resized, opened or collapsed. The flag must be cleared by whoever saves.
+        ImGuiIO& io = ImGui::GetIO();
+        if (!io.WantSaveIniSettings)
+            return;
+
+        SaveSettings();
+        io.WantSaveIniSettings = false;
+    }
+
+    void ImGuiLibrary::SaveSettings() const
+    {
+        ImGui::SaveIniSettingsToDisk(m_settingsPath.string().c_str());
     }
 }

@@ -3,6 +3,7 @@ find_package(Stb REQUIRED)  # ImageTests writes test PNG files with stb_image_wr
 
 # --- Unit tests: one executable for all tests, mirrors SourceCode/ ------------
 set(TEST_SOURCES
+    Core/AssetCacheTests.cpp
     Core/FileSystemTests.cpp
     Core/FixedTimestepTests.cpp
     Core/FrameLimiterTests.cpp
@@ -20,6 +21,7 @@ set(TEST_SOURCES
     Input/MouseTests.cpp
 
     Renderer/CameraTests.cpp
+    Renderer/GLTextureTests.cpp
 )
 
 add_executable(AbominationTests

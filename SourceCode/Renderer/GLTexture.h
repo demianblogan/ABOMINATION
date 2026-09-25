@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <expected>
 #include <filesystem>
@@ -36,10 +37,22 @@ namespace Abomination::Renderer
         // unit must match layout(binding = N) of the sampler2D in the shader.
         void Bind(std::uint32_t unit) const;
 
+        [[nodiscard]] int GetWidth() const noexcept;
+        [[nodiscard]] int GetHeight() const noexcept;
+
+        // Bytes of video memory the texture takes: all its mipmap levels, 4 bytes per texel.
+        [[nodiscard]] std::size_t GetVideoMemorySize() const noexcept;
+
+        // Bytes of video memory a texture of this size takes with all its mipmap levels. Needs no OpenGL, so it can be
+        // tested and used for estimates before a texture is created.
+        [[nodiscard]] static std::size_t CalculateVideoMemorySize(int width, int height) noexcept;
+
     private:
-        explicit GLTexture(std::uint32_t textureID) noexcept;
+        GLTexture(std::uint32_t textureID, int width, int height) noexcept;
 
         // 0 means "no texture" (a moved-from object).
         std::uint32_t m_textureID = 0;
+        int m_width = 0;
+        int m_height = 0;
     };
 }

@@ -21,6 +21,11 @@ namespace Abomination::Platform
     class Window;
 }
 
+namespace Abomination::Renderer
+{
+    struct RenderAssets;
+}
+
 namespace Abomination::UI
 {
     // Everything the overlay shows or lets the developer change in one frame, gathered in one parameter of Draw().
@@ -32,6 +37,7 @@ namespace Abomination::UI
         const Core::FixedTimestep& fixedTimestep;
         Platform::Window& window;
         Core::FrameLimiter& frameLimiter;
+        const Renderer::RenderAssets& renderAssets;
     };
 
     // Developer overlay drawn with Dear ImGui on top of the game: a menu bar with debug windows and settings.
@@ -39,9 +45,13 @@ namespace Abomination::UI
     class DebugOverlay
     {
     public:
-        // fontPath: the TTF font of the overlay text (the built-in font is used if the file is missing).
+        // The overlay gets only folders and knows the names of its own files itself (FontFileName, SettingsFileName):
+        // where the game keeps its folders is decided by the application, which files the overlay needs is not its concern.
+        //   assetsDirectory   - the game assets; the overlay font is read from there (the built-in font if it is missing);
+        //   settingsDirectory - where the positions and sizes of the debug windows are remembered between runs.
         [[nodiscard]] static std::expected<DebugOverlay, std::string> Create(const Platform::Window& window,
-                                                                             const std::filesystem::path& fontPath);
+                                                                             const std::filesystem::path& assetsDirectory,
+                                                                             const std::filesystem::path& settingsDirectory);
 
         // Builds the overlay for the current frame and draws it on top of what is already in the back buffer.
         // Must be called once per frame, after the game is drawn and before the buffers are swapped.
@@ -63,6 +73,9 @@ namespace Abomination::UI
         // The small window in the top-left corner: version, GPU, FPS, frame time and its graph.
         void DrawPerformanceWindow(const DebugOverlayContext& context);
 
+        // Every loaded texture and shader program: size, video memory, and whether a fallback replaced the file.
+        void DrawAssetsWindow(const DebugOverlayContext& context);
+
         // Members are destroyed in reverse order of declaration: both backends first, then the ImGui context they use.
         ImGuiLibrary m_library;
         Platform::ImGuiPlatformBackend m_platformBackend;
@@ -76,5 +89,6 @@ namespace Abomination::UI
 
         // Which debug windows are open. Changed by the View menu and by the close button of each window.
         bool m_isPerformanceWindowOpen = true;
+        bool m_isAssetsWindowOpen = false;
     };
 }

@@ -143,11 +143,15 @@ A module may depend only on modules **below** it in this diagram.
   (drawing), and `UI::DebugOverlay` combines them and describes the windows.
   ImGui is used only for developer tools, never for the game interface.
 - **The debug overlay** has a main menu bar (F1): *View* opens and closes
-  debug windows (now *Performance*), *Settings* changes settings grouped like
-  the future options menu (now *Display*: V-Sync, FPS limit). `Draw()` takes
-  one `UI::DebugOverlayContext` with references to the systems the overlay
-  shows and changes; a new debug tool adds a field to it instead of a new
-  parameter. The references are valid only during the call.
+  debug windows (now *Performance* and *Assets*), *Settings* changes settings
+  grouped like the future options menu (now *Display*: V-Sync, FPS limit).
+  `Draw()` takes one `UI::DebugOverlayContext` with references to the systems
+  the overlay shows and changes; a new debug tool adds a field to it instead
+  of a new parameter. The references are valid only during the call.
+  Positions and sizes of the windows are saved in `DebugOverlay.ini` next to
+  the executable. `UI::ImGuiLibrary` loads and saves that file itself instead
+  of giving ImGui a `const char*` path, which would dangle when the library
+  object is moved.
 
 **Startup order** (`Main.cpp` → `Application::Create`)
 
@@ -159,8 +163,14 @@ A module may depend only on modules **below** it in this diagram.
    checks that 4.6 is available.
 5. In Debug builds `Renderer::EnableDebugOutput` routes driver messages to the
    log.
-6. `Renderer::DemoScene` loads its shaders and texture from `Assets/`.
-7. `UI::DebugOverlay` creates the ImGui context and both backends.
+6. `Renderer::RenderAssets` is created: the texture store (with its
+   checkerboard fallback) and the shader store (with its compiled fallback
+   program).
+7. `Renderer::DemoScene` loads its shader program and texture through the
+   stores.
+8. `UI::DebugOverlay` creates the ImGui context and both backends, loads its
+   font from `Assets/` and its window settings (`DebugOverlay.ini`) from the
+   folder of the executable.
 
 Objects that own resources are created by a static `Create()` /
 `Initialize()` returning `std::expected<Object, std::string>`, because a
@@ -266,14 +276,18 @@ Inside the renderer:
     binding slots);
   - `GLTexture` — immutable storage with all mipmap levels, pixel-crisp
     filtering (`GL_NEAREST` / `GL_NEAREST_MIPMAP_LINEAR`), repeat wrapping,
-    bound to texture units.
+    bound to texture units; knows its size and video memory.
+- `TextureStore`, `ShaderStore`, grouped in `RenderAssets` — load every
+  texture and shader program once and hand out handles (see section 9).
 - Explicit `layout(location)` / `layout(binding)` everywhere: C++ constants
   and shaders agree on the numbers in advance, nothing is queried at run time.
 - `Camera` — the view and projection matrices (see section 8).
-- `DemoScene` — a **temporary** rotating textured cube (model matrix of its
-  own, view and projection from the camera passed in, depth test, back-face
-  culling) used to learn the basics; replaced by the high-level renderer in
-  0.2.
+- `DemoScene` — a **temporary** rotating crate (model matrix of its own, view
+  and projection from the camera passed in, depth test, back-face culling)
+  used to learn the basics. It keeps handles to its shader program and
+  texture and its own cube geometry; replaced by entities with a mesh
+  component and a render system in 0.2 (ECS), when geometry becomes the
+  `Mesh` asset.
 
 Color textures are uploaded as `GL_RGBA8` without gamma correction for now;
 sRGB textures and an sRGB framebuffer come with lighting in 0.5.
@@ -364,35 +378,83 @@ camera instead of a `Camera` object.
 
 ## 9. Assets
 
-**Now (0.1):**
+An **asset** is data from a file that many objects use and that is loaded
+once: textures and shader programs now; meshes, materials, sounds, fonts
+later. A level map is not an asset (`World` owns it, only its textures are
+assets), neither are JSON configurations (`Config`).
+
+**Files**
 
 - The `Assets/` folder of the repository is copied next to the executable on
-  every build (CMake target `CopyAssets`, only changed files are copied).
-  The game finds it as `Platform::GetExecutableDirectory() / "Assets"`;
-  the path is computed once in `Main.cpp` and passed down.
-- Loading is split into steps, each a separate function:
-  reading a file (`Core::ReadTextFile`, `Core::ReadBinaryFile`) →
-  decoding (`Core::LoadImageFile`, stb_image; rows flipped so the bottom row
-  comes first, as OpenGL expects) → uploading to the GPU (`GLTexture`,
-  `GLShaderProgram`).
-- A missing font falls back to the built-in one with a warning; other assets
-  are loaded by `DemoScene` directly.
+  every build (CMake target `CopyAssets`, only new and changed files are
+  copied; a file deleted from `Assets/` stays in the output folder until the
+  Build folder is cleaned). The game finds it as
+  `Platform::GetExecutableDirectory() / "Assets"`; the path is computed once
+  in `Main.cpp` and passed down.
+- Asset paths are relative to `Assets/` and use forward slashes:
+  `"Textures/Crate.png"`, `"Shaders/TexturedMesh"` (a shader program is the
+  `.vert` + `.frag` pair with that name).
+- The application knows the folders; every module knows the names of its own
+  files (`TextureStore` gets the assets folder, `DebugOverlay` gets the assets
+  and settings folders).
 - Every third-party asset is listed in `ASSETS.md` before it is committed.
 
-**Planned (0.2)** — when the first level brings dozens of textures:
+**Loading steps**, each a separate function: reading a file
+(`Core::ReadTextFile`, `Core::ReadBinaryFile`) → decoding
+(`Core::LoadImageFile`, stb_image; rows flipped so the bottom row comes
+first, as OpenGL expects) → uploading to the GPU (`GLTexture`,
+`GLShaderProgram`).
 
-- An asset manager with typed handles (`AssetHandle<T>`: index + generation)
-  instead of pointers, so components can be saved and a stale handle is
-  detected.
-- One generic storage template plus a loader per asset type (texture,
-  shader, later mesh and material).
-- A cache by path: an asset requested twice is loaded once.
-- Lifetime by groups: **global** (fonts, weapons) and **level** (everything
-  the current level loaded, released when the next level starts).
-- A visible fallback for missing textures (magenta checker) instead of an
-  error.
-- Later: shader hot reload (0.5), packed archives with a virtual file system
-  (near 1.0).
+**Handles and caches (0.2)**
+
+```
+Core::AssetCache<Asset>                    slots: [0: Crate.png, gen 1] [1: free, gen 2] ...
+  Find(path) / Add(path, asset)            free slots: [1]
+  Get(handle) / Remove(handle)             path -> handle: "Textures/Crate.png" -> {0, 1}
+          ▲
+Renderer::TextureStore, ShaderStore        Load(path) -> handle, Get(handle) -> object
+          ▲
+Renderer::RenderAssets                     all graphics stores, owned by Application
+```
+
+- `Core::AssetHandle<Asset>` is a slot index and a generation, not a pointer.
+  Removing an asset increases the generation of its slot, so old handles are
+  detected as invalid instead of pointing to whatever reuses the slot. The
+  asset type is part of the handle type: a texture handle cannot be passed
+  where a shader handle is expected. Handles can be stored in components and,
+  with the path, in save files.
+- `Core::AssetCache<Asset>` only stores: slots with `std::optional<Asset>`,
+  a list of free slots, a map path → handle with heterogeneous lookup (search
+  by `std::string_view` without temporary strings). Adding the same path
+  again replaces the asset and keeps the handle (the base of hot reload).
+  Pointers from `Get()` are valid until the next `Add()`/`Remove()`, so code
+  keeps handles and asks for the object when it uses it.
+- The **stores** of each asset type load files and use a cache inside:
+  `Renderer::TextureStore`, `Renderer::ShaderStore`; later the mesh and
+  material stores (0.3) and the sound store in `Audio`. There is no single
+  class that knows all asset types, so OpenGL stays in `Renderer` and sound in
+  `Audio`.
+- `Renderer::RenderAssets` groups the stores of all graphics assets. Code that
+  draws gets it as one parameter; a new graphics asset type adds a member.
+- **Fallbacks:** a missing or broken texture becomes a magenta and black
+  checkerboard, a broken shader program a plain magenta program (written in
+  the code, so it works when files do not). The fallback is stored under the
+  path of the broken asset, so it is looked for and reported once, and a
+  warning (texture) or error with the compiler log (shader) goes to the log.
+  `Get()` never returns null: an invalid handle gives the fallback.
+- **Assets window** of the debug overlay (View > Assets): every loaded
+  texture with its size and video memory (all mipmap levels), every shader
+  program, fallbacks marked in magenta.
+
+**Planned:**
+
+- Lifetime by groups (0.2, with the first level): **global** assets live the
+  whole game (weapons, HUD font), **level** assets are removed when the next
+  level starts.
+- Meshes and materials as assets (0.3); sounds in `Audio` (0.3); music is
+  streamed, not loaded whole (0.8).
+- Hot reload of shaders and textures (0.5), packed archives with a virtual
+  file system (near 1.0).
 
 ## 10. ECS — Planned (0.2)
 

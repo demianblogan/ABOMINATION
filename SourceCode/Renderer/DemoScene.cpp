@@ -92,18 +92,11 @@ namespace Abomination::Renderer
         constexpr glm::vec3 RotationAxis{0.6f, 1.0f, 0.0f};
     }
 
-    std::expected<DemoScene, std::string> DemoScene::Create(const std::filesystem::path& assetsDirectory)
+    DemoScene DemoScene::Create(RenderAssets& assets)
     {
-        const std::filesystem::path shadersDirectory = assetsDirectory / "Shaders";
-        std::expected<GLShaderProgram, std::string> shaderProgram =
-            GLShaderProgram::CreateFromFiles(shadersDirectory / "TexturedMesh.vert", shadersDirectory / "TexturedMesh.frag");
-        if (!shaderProgram.has_value())
-            return std::unexpected(shaderProgram.error());
-
-        std::expected<GLTexture, std::string> texture =
-            GLTexture::CreateFromFile(assetsDirectory / "Textures" / "TestPattern.png");
-        if (!texture.has_value())
-            return std::unexpected(texture.error());
+        // Loading cannot fail: a missing or broken file gives a fallback, so the scene is always created.
+        const ShaderHandle shaderProgram = assets.shaders.Load("Shaders/TexturedMesh");
+        const TextureHandle texture = assets.textures.Load("Textures/Crate.png");
 
         // Upload the vertices and the indices to the GPU once; from now on they live in video memory.
         GLBuffer vertexBuffer(std::as_bytes(std::span(CubeVertices)));
@@ -116,20 +109,20 @@ namespace Abomination::Renderer
         vertexArray.SetFloatAttribute(TexCoordAttribute, VertexBufferBinding, 2, offsetof(TexturedVertex, texCoord));
         vertexArray.SetIndexBuffer(indexBuffer);
 
-        return DemoScene(std::move(*shaderProgram), std::move(*texture), std::move(vertexBuffer), std::move(indexBuffer),
-                         std::move(vertexArray));
+        return DemoScene(shaderProgram, texture, std::move(vertexBuffer), std::move(indexBuffer), std::move(vertexArray));
     }
 
-    DemoScene::DemoScene(GLShaderProgram shaderProgram, GLTexture texture, GLBuffer vertexBuffer, GLBuffer indexBuffer,
+    DemoScene::DemoScene(ShaderHandle shaderProgram, TextureHandle texture, GLBuffer vertexBuffer, GLBuffer indexBuffer,
                          GLVertexArray vertexArray) noexcept
-        : m_shaderProgram(std::move(shaderProgram))
-        , m_texture(std::move(texture))
+        : m_shaderProgram(shaderProgram)
+        , m_texture(texture)
         , m_vertexBuffer(std::move(vertexBuffer))
         , m_indexBuffer(std::move(indexBuffer))
         , m_vertexArray(std::move(vertexArray))
     {}
 
-    void DemoScene::Draw(double time, const Camera& camera, int widthInPixels, int heightInPixels) const
+    void DemoScene::Draw(double time, const Camera& camera, int widthInPixels, int heightInPixels,
+                         const RenderAssets& assets) const
     {
         // A minimized window has a height of 0: there is nothing to draw, and the aspect ratio would divide by zero.
         if (widthInPixels <= 0 || heightInPixels <= 0)
@@ -144,9 +137,13 @@ namespace Abomination::Renderer
         //    a square a square in a wide window.
         const float aspectRatio = static_cast<float>(widthInPixels) / static_cast<float>(heightInPixels);
 
-        m_shaderProgram.SetUniform(ModelUniform, model);
-        m_shaderProgram.SetUniform(ViewUniform, camera.GetViewMatrix());
-        m_shaderProgram.SetUniform(ProjectionUniform, camera.GetProjectionMatrix(aspectRatio));
+        // The handles are turned into the objects at the moment of use; the references are not kept (see AssetCache::Get).
+        const GLShaderProgram& shaderProgram = assets.shaders.Get(m_shaderProgram);
+        const GLTexture& texture = assets.textures.Get(m_texture);
+
+        shaderProgram.SetUniform(ModelUniform, model);
+        shaderProgram.SetUniform(ViewUniform, camera.GetViewMatrix());
+        shaderProgram.SetUniform(ProjectionUniform, camera.GetProjectionMatrix(aspectRatio));
 
         // Depth test: for every pixel the depth buffer remembers how far the closest surface drawn there is.
         // A new pixel is drawn only if it is closer (GL_LESS, the default); otherwise it is hidden and thrown away.
@@ -158,8 +155,8 @@ namespace Abomination::Renderer
         // is which by the order of the vertices on the screen: counter-clockwise is the front (GL_CCW, the default).
         glEnable(GL_CULL_FACE);
 
-        m_shaderProgram.Use();
-        m_texture.Bind(AlbedoTextureUnit);
+        shaderProgram.Use();
+        texture.Bind(AlbedoTextureUnit);
         m_vertexArray.Bind();
 
         glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(CubeIndices.size()), GL_UNSIGNED_INT, nullptr);

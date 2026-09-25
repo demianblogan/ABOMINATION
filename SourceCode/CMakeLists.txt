@@ -31,8 +31,19 @@ set(LIBRARY_SOURCES
     Core/Version.h
     Core/Version.cpp.in
 
+    Gameplay/FreeFlyCameraController.h
+    Gameplay/FreeFlyCameraController.cpp
+
+    Input/Action.h
+    Input/ActionStates.h
+    Input/ActionStates.cpp
+    Input/InputBindings.h
+    Input/InputBindings.cpp
+    Input/InputDevices.h
     Input/Keyboard.h
     Input/Keyboard.cpp
+    Input/Mouse.h
+    Input/Mouse.cpp
 
     Platform/ImGuiPlatformBackend.h
     Platform/ImGuiPlatformBackend.cpp
@@ -43,6 +54,8 @@ set(LIBRARY_SOURCES
     Platform/Window.h
     Platform/Window.cpp
 
+    Renderer/Camera.h
+    Renderer/Camera.cpp
     Renderer/DebugOutput.h
     Renderer/DebugOutput.cpp
     Renderer/DemoScene.h

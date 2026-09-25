@@ -2,7 +2,7 @@
 
 #include "Core/BuildConfiguration.h"
 #include "Core/Log.h"
-#include "Input/Keyboard.h"
+#include "Input/InputDevices.h"
 
 #include <SDL3/SDL.h>
 #include <imgui.h>
@@ -48,6 +48,13 @@ namespace Abomination::Platform
         bool IsKeyboardCapturedByImGui()
         {
             return ImGui::GetCurrentContext() != nullptr && ImGui::GetIO().WantCaptureKeyboard;
+        }
+
+        // True while the cursor is over an ImGui window (or ImGui is being dragged): mouse clicks and the wheel belong
+        // to ImGui then, not to the game.
+        bool IsMouseCapturedByImGui()
+        {
+            return ImGui::GetCurrentContext() != nullptr && ImGui::GetIO().WantCaptureMouse;
         }
     }
 
@@ -121,10 +128,11 @@ namespace Abomination::Platform
         Destroy();
     }
 
-    void Window::ProcessEvents(Input::Keyboard& keyboard)
+    void Window::ProcessEvents(Input::InputDevices& input)
     {
-        // The keys pressed or released during the previous frame are forgotten; this frame's events fill them again.
-        keyboard.StartFrame();
+        // What was pressed, released or moved during the previous frame is forgotten; this frame's events fill it again.
+        input.keyboard.StartFrame();
+        input.mouse.StartFrame();
 
         SDL_Event event;
         while (SDL_PollEvent(&event))
@@ -154,18 +162,47 @@ namespace Abomination::Platform
                 // event.key.scancode is the physical position of the key; Input::Key uses the same values.
                 case SDL_EVENT_KEY_DOWN:
                     if (!event.key.repeat && !IsKeyboardCapturedByImGui())
-                        keyboard.PressKey(static_cast<Input::Key>(event.key.scancode));
+                        input.keyboard.PressKey(static_cast<Input::Key>(event.key.scancode));
                     break;
 
                 // A key went up. Always passed on, even while ImGui uses the keyboard: otherwise a key pressed
                 // before ImGui took the keyboard would never be released.
                 case SDL_EVENT_KEY_UP:
-                    keyboard.ReleaseKey(static_cast<Input::Key>(event.key.scancode));
+                    input.keyboard.ReleaseKey(static_cast<Input::Key>(event.key.scancode));
                     break;
 
-                // The window stopped receiving keyboard input (Alt+Tab, a click on another window).
+                // The mouse moved. xrel/yrel is the movement since the previous event (+Y is down), which keeps
+                // working in relative mode, where the cursor position no longer changes.
+                case SDL_EVENT_MOUSE_MOTION:
+                    input.mouse.Move(glm::vec2(event.motion.xrel, event.motion.yrel));
+                    break;
+
+                // A mouse button went down. Ignored while the cursor is over an ImGui window, so clicking a debug window
+                // does not also act in the game. Input::MouseButton uses the same numbers as SDL.
+                case SDL_EVENT_MOUSE_BUTTON_DOWN:
+                    if (!IsMouseCapturedByImGui())
+                        input.mouse.PressButton(static_cast<Input::MouseButton>(event.button.button));
+                    break;
+
+                // A mouse button went up. Always passed on, for the same reason as key releases.
+                case SDL_EVENT_MOUSE_BUTTON_UP:
+                    input.mouse.ReleaseButton(static_cast<Input::MouseButton>(event.button.button));
+                    break;
+
+                // The wheel turned. With "natural scrolling" enabled in the system settings SDL reports the values
+                // inverted and marks it with SDL_MOUSEWHEEL_FLIPPED; turning them back gives the physical direction.
+                case SDL_EVENT_MOUSE_WHEEL:
+                    if (!IsMouseCapturedByImGui())
+                    {
+                        const float direction = event.wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -1.0f : 1.0f;
+                        input.mouse.Scroll(event.wheel.y * direction);
+                    }
+                    break;
+
+                // The window stopped receiving input (Alt+Tab, a click on another window).
                 case SDL_EVENT_WINDOW_FOCUS_LOST:
-                    keyboard.ReleaseAllKeys();
+                    input.keyboard.ReleaseAllKeys();
+                    input.mouse.ReleaseAllButtons();
                     break;
             }
         }
@@ -174,6 +211,11 @@ namespace Abomination::Platform
     void Window::SwapBuffers()
     {
         SDL_GL_SwapWindow(m_window);
+    }
+
+    void Window::SetRelativeMouseMode(bool isEnabled)
+    {
+        SDL_SetWindowRelativeMouseMode(m_window, isEnabled);
     }
 
     bool Window::IsCloseRequested() const noexcept

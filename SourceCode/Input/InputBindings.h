@@ -1,0 +1,39 @@
+#pragma once
+
+#include "Input/Action.h"
+#include "Input/Keyboard.h"
+#include "Input/Mouse.h"
+
+#include <array>
+#include <span>
+#include <variant>
+#include <vector>
+
+namespace Abomination::Input
+{
+    // One physical input that can trigger an action: a key or a mouse button (a gamepad button later).
+    // std::variant holds exactly one of the listed types at a time and remembers which one.
+    using InputBinding = std::variant<Key, MouseButton>;
+
+    // Which inputs trigger which action. An action may have several bindings (for example W and the Up arrow);
+    // it is active while any of them is held.
+    class InputBindings
+    {
+    public:
+        // The default controls: WASD to move, Q/E down/up, Shift faster, the right mouse button to look around,
+        // F1 for the debug overlay.
+        [[nodiscard]] static InputBindings CreateDefault();
+
+        // Adds one more input for the action; the existing bindings of the action stay.
+        void Bind(Action action, InputBinding binding);
+
+        // Removes all bindings of the action.
+        void Unbind(Action action);
+
+        [[nodiscard]] std::span<const InputBinding> GetBindings(Action action) const noexcept;
+
+    private:
+        // The index is the numeric value of Action.
+        std::array<std::vector<InputBinding>, ActionCount> m_bindings;
+    };
+}

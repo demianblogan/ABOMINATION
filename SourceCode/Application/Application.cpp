@@ -8,10 +8,9 @@
 #include "Renderer/OpenGLLoader.h"
 #include "Renderer/RenderCommands.h"
 
+#include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 
-#include <cmath>
-#include <numbers>
 #include <utility>
 
 namespace Abomination
@@ -21,22 +20,11 @@ namespace Abomination
 
     namespace
     {
-        // A dark color that slowly goes around the color wheel: red, green and blue follow the same sine wave,
-        // shifted by a third of a period from each other. One full cycle takes about 12.5 seconds.
-        glm::vec4 CalculateBackgroundColor(double time)
-        {
-            constexpr double Speed = 0.5;      // Radians per second
-            constexpr double Middle = 0.2;     // Average brightness of each channel
-            constexpr double Amplitude = 0.15; // How far a channel goes up and down from the middle
-            constexpr double ThirdOfCircle = 2.0 * std::numbers::pi / 3.0;
+        // A neutral dark gray, so the colors of the scene are easy to judge.
+        constexpr glm::vec4 BackgroundColor{0.12f, 0.12f, 0.13f, 1.0f};
 
-            const double angle = time * Speed;
-            const double red = Middle + Amplitude * std::sin(angle);
-            const double green = Middle + Amplitude * std::sin(angle + ThirdOfCircle);
-            const double blue = Middle + Amplitude * std::sin(angle + 2.0 * ThirdOfCircle);
-
-            return glm::vec4(red, green, blue, 1.0);
-        }
+        // The camera starts 2.5 meters in front of the cube (the cube is at the origin, the camera looks along -Z).
+        constexpr glm::vec3 InitialCameraPosition{0.0f, 0.0f, 2.5f};
     }
 
     std::expected<Application, std::string> Application::Create(const std::filesystem::path& assetsDirectory)
@@ -75,7 +63,9 @@ namespace Abomination
         , m_window(std::move(window))
         , m_demoScene(std::move(demoScene))
         , m_debugOverlay(std::move(debugOverlay))
-    {}
+    {
+        m_camera.SetPosition(InitialCameraPosition);
+    }
 
     int Application::Run()
     {
@@ -90,16 +80,27 @@ namespace Abomination
             frameTimer.StartFrame(Core::FrameTimer::Clock::now());
             frameStatistics.AddFrame(frameTimer.GetDeltaTime());
 
-            m_window.ProcessEvents(m_keyboard);
+            // First the devices get this frame's input, then the actions are calculated from them.
+            m_window.ProcessEvents(m_inputDevices);
+            m_actionStates.Update(m_inputDevices, m_inputBindings);
 
-            // A direct key check for now. When the action layer of input appears (the fly camera branch), this becomes
-            // the ToggleDebugOverlay action, and the key is taken from the bindings instead of being written here.
-            if (m_keyboard.WasKeyPressed(Input::Key::F1))
+            // An action of the application itself (not of the game), so it is handled here.
+            if (m_actionStates.WasActionStarted(Input::Action::ToggleDebugOverlay))
                 m_debugOverlay.ToggleVisibility();
 
+            // While LookAroundMode is active (the right mouse button by default), the mouse is captured for looking around,
+            // like in the Unity and Unreal editors. The mode is switched only when the action starts or stops.
+            // Capturing is done here because the window belongs to the application; the controller only turns the camera.
+            if (m_actionStates.WasActionStarted(Input::Action::LookAroundMode))
+                m_window.SetRelativeMouseMode(true);
+            if (m_actionStates.WasActionStopped(Input::Action::LookAroundMode))
+                m_window.SetRelativeMouseMode(false);
+
+            m_cameraController.Update(m_camera, m_actionStates, m_inputDevices.mouse, frameTimer.GetDeltaTime());
+
             Renderer::SetViewport(m_window.GetWidthInPixels(), m_window.GetHeightInPixels());
-            Renderer::ClearFrame(CalculateBackgroundColor(frameTimer.GetTotalTime()));
-            m_demoScene.Draw(frameTimer.GetTotalTime(), m_window.GetWidthInPixels(), m_window.GetHeightInPixels());
+            Renderer::ClearFrame(BackgroundColor);
+            m_demoScene.Draw(frameTimer.GetTotalTime(), m_camera, m_window.GetWidthInPixels(), m_window.GetHeightInPixels());
 
             // The overlay is drawn last, on top of the game.
             m_debugOverlay.Draw(frameStatistics);

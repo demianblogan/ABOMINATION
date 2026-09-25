@@ -9,7 +9,9 @@ screen. Third-party **assets** are listed separately in
 ## Distributed with the game
 
 Libraries linked into `Abomination.exe`. Their licenses must be respected in
-every release.
+every release: the license texts are shipped in the `Licenses/` folder of the
+game package (see `CMake/Packaging.cmake`). A new library here also gets a
+line there.
 
 | Library | Version | License | Purpose                                  | Website                          |
 |---------|---------|---------|------------------------------------------|----------------------------------|

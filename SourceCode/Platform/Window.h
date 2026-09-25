@@ -9,7 +9,7 @@ struct SDL_GLContextState;
 
 namespace Abomination::Input
 {
-    class Keyboard;
+    struct InputDevices;
 }
 
 namespace Abomination::Platform
@@ -41,11 +41,15 @@ namespace Abomination::Platform
         ~Window();
 
         // Handles all events the operating system has sent since the last call: closing and resizing the window,
-        // keys. Starts a new input frame of the keyboard and fills it with the key presses and releases of this frame.
-        void ProcessEvents(Input::Keyboard& keyboard);
+        // keys, the mouse. Starts a new input frame of every device and fills it with the input of this frame.
+        void ProcessEvents(Input::InputDevices& input);
 
         // Shows the frame that has just been drawn: swaps the back buffer and the front buffer.
         void SwapBuffers();
+
+        // Relative mouse mode: the cursor is hidden and locked inside the window, and the mouse reports only how far
+        // it moved, without stopping at the edges of the screen. Used for looking around with the mouse.
+        void SetRelativeMouseMode(bool isEnabled);
 
         [[nodiscard]] bool IsCloseRequested() const noexcept;
 

@@ -1,0 +1,94 @@
+name: Release
+
+# A pushed version tag (v0.1.0) builds the game package and creates a draft GitHub Release with it.
+# Started by hand (Actions → Release → Run workflow), it only builds the package and keeps it as a workflow
+# artifact: a way to check the package of any branch without creating a release.
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+permissions:
+  contents: write  # Creating a release and uploading files to it
+
+jobs:
+  package:
+    name: Build the game package
+    runs-on: windows-2025-vs2026
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up vcpkg
+        uses: ./.github/actions/SetUpVcpkg
+        with:
+          configuration: release
+
+      - name: Configure
+        run: cmake --preset windows-msvc
+
+      - name: Build
+        run: cmake --build --preset release
+
+      # A release is published only from code that passes every test.
+      - name: Test
+        run: ctest --preset release
+
+      # The version comes from project(... VERSION ...) of the root CMakeLists.txt,
+      # the same version the game shows in the debug overlay.
+      - name: Read version
+        shell: pwsh
+        run: |
+          $match = Select-String -Path Build/windows-msvc/CMakeCache.txt -Pattern '^CMAKE_PROJECT_VERSION:STATIC=(.+)$'
+          $version = $match.Matches[0].Groups[1].Value
+          "VERSION=$version" >> $env:GITHUB_ENV
+          "PACKAGE_NAME=Abomination-$version" >> $env:GITHUB_ENV
+
+      # Protects from a forgotten version bump: tag v0.2.0 on code that still says 0.1.0 is an error.
+      - name: Check that the tag matches the version
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        run: |
+          if ('${{ github.ref_name }}' -ne "v$env:VERSION")
+          {
+              Write-Error "Tag ${{ github.ref_name }} does not match the project version $env:VERSION (CMakeLists.txt)."
+              exit 1
+          }
+
+      # cmake --install runs the rules from CMake/Packaging.cmake. The package is installed into a folder with the
+      # version in its name, so the archive unpacks into Abomination-0.1.0/ instead of scattering files.
+      - name: Package
+        shell: pwsh
+        run: |
+          $packageDir = Join-Path $env:RUNNER_TEMP "Package/$env:PACKAGE_NAME"
+          cmake --install Build/windows-msvc --config Release --prefix $packageDir
+          Compress-Archive -Path $packageDir -DestinationPath "$env:PACKAGE_NAME-Windows-x64.zip"
+
+      - name: Keep the package as a workflow artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.PACKAGE_NAME }}-Windows-x64
+          path: ${{ env.PACKAGE_NAME }}-Windows-x64.zip
+          retention-days: 14
+
+      # The release is created as a draft: its changelog is written by hand and it is published from the GitHub page.
+      # --generate-notes starts the changelog with the list of pull requests merged since the previous release.
+      # If the workflow is run again for the same tag, the draft already exists and only the archive is replaced.
+      - name: Create a draft GitHub Release
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = '${{ github.ref_name }}'
+          $archive = "$env:PACKAGE_NAME-Windows-x64.zip"
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0)
+          {
+              gh release upload $tag $archive --clobber
+          }
+          else
+          {
+              gh release create $tag $archive --draft --verify-tag --generate-notes --title "Abomination $env:VERSION"
+          }

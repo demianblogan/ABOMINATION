@@ -14,10 +14,6 @@
 
 1.
 
-## Screenshots
-
-<!-- Images or GIFs for any visual change. Remove this section if none. -->
-
 ## Milestone
 
 <!-- e.g. 0.1 Foundation -->

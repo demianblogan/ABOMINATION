@@ -15,15 +15,19 @@ built from scratch with modern C++ and OpenGL 4.6.**
 ![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
 <br>
 [![CI](https://img.shields.io/github/actions/workflow/status/demianblogan/Abomination/CI.yml?branch=main&style=flat-square&label=CI&logo=githubactions&logoColor=white)](https://github.com/demianblogan/Abomination/actions/workflows/CI.yml)
+[![Release](https://img.shields.io/github/v/release/demianblogan/Abomination?style=flat-square&label=release&color=brightgreen)](https://github.com/demianblogan/Abomination/releases/latest)
 [![Status](https://img.shields.io/badge/status-early_development-orange?style=flat-square)](Documentation/ROADMAP.md)
-[![Milestone](https://img.shields.io/badge/milestone-0.1_Foundation-blue?style=flat-square)](Documentation/ROADMAP.md)
+[![Milestone](https://img.shields.io/badge/milestone-0.2_First_Steps-blue?style=flat-square)](Documentation/ROADMAP.md)
 [![License](https://img.shields.io/badge/license-PolyForm_Noncommercial_1.0-lightgrey?style=flat-square)](LICENSE.md)
 
 [About](#-about) •
 [Features](#-features) •
+[Screenshots](#-screenshots) •
 [Tech Stack](#%EF%B8%8F-tech-stack) •
-[Roadmap](#%EF%B8%8F-roadmap) •
+[Download](#%EF%B8%8F-download) •
 [Building](#-building) •
+[Controls](#-controls) •
+[Roadmap](#%EF%B8%8F-roadmap) •
 [Documentation](#-documentation) •
 [License](#-license)
 
@@ -42,8 +46,8 @@ written from the ground up, and every system — from the OpenGL renderer to
 the enemy AI — is built to be read and learned from.
 
 > [!NOTE]
-> The game is in early development. Nothing is playable yet —
-> follow the [roadmap](Documentation/ROADMAP.md) to see what is being built right now.
+> The game is in early development. **Version 0.1** is out: a free-fly camera around a test
+> cube — follow the [roadmap](Documentation/ROADMAP.md) to see what is being built next.
 
 ## 🎯 Features
 
@@ -73,6 +77,16 @@ the enemy AI — is built to be read and learned from.
 </tr>
 </table>
 
+## 📸 Screenshots
+
+<div align="center">
+
+<img src="Documentation/Screenshots/v0.1.0/RotatingCube.png" alt="Version 0.1: a rotating textured cube with the debug overlay" width="720">
+
+<sub><b>0.1 Foundation</b> — the first 3D image: a textured cube, a free-fly camera and the debug overlay</sub>
+
+</div>
+
 ## 🛠️ Tech Stack
 
 | Area            | Technology                                                                 |
@@ -88,6 +102,15 @@ the enemy AI — is built to be read and learned from.
 | Build           | CMake · vcpkg · GitHub Actions                                             |
 | Testing         | GoogleTest · CTest                                                         |
 
+## ⬇️ Download
+
+Every finished milestone is published as a ready-to-play build:
+**[latest release](https://github.com/demianblogan/Abomination/releases/latest)**.
+Unzip the archive anywhere and run `Abomination.exe` — nothing else to install.
+
+Requires **Windows 10/11 (x64)** and a graphics card with **OpenGL 4.6**
+support (any GPU from the last ten years with up-to-date drivers).
+
 ## 🔨 Building
 
 Requires **Visual Studio 2026** (Desktop development with C++) and
@@ -101,11 +124,23 @@ Open the folder in Visual Studio — it picks up `CMakePresets.json`, vcpkg
 fetches all libraries, and **F5** runs the game.
 Full instructions, including the command line: **[BUILDING.md](Documentation/BUILDING.md)**.
 
+## 🎮 Controls
+
+The current build (milestone 0.1) has a free-fly camera around a test cube.
+
+| Input | Action |
+|:-----:|--------|
+| <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> | Fly forward, left, back, right (relative to the view) |
+| <kbd>E</kbd> / <kbd>Q</kbd> | Fly up / down |
+| <kbd>Shift</kbd> | Fly faster |
+| Hold **right mouse button** | Look around with the mouse |
+| <kbd>F1</kbd> | Show / hide the debug overlay |
+
 ## 🗺️ Roadmap
 
 | Version | Milestone              | Status |
 |:-------:|------------------------|:------:|
-| 0.1     | Foundation             | 🔨     |
+| 0.1     | Foundation             | ✅     |
 | 0.2     | First Steps            | ⏳     |
 | 0.3     | Boomstick              | ⏳     |
 | 0.4     | It Moves               | ⏳     |

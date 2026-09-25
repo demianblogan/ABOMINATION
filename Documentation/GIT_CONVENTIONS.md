@@ -149,7 +149,6 @@ It is filled in automatically when a PR is opened on GitHub.
 | **Summary**          | 1–3 sentences: what this PR does and why                   |
 | **Changes**          | Bullet list of the notable changes                         |
 | **How to test**      | Steps a reviewer follows to see the change working         |
-| **Screenshots**      | Images or GIFs for any visual change, otherwise remove it  |
 | **Milestone**        | The milestone the PR belongs to, e.g. `0.1 Foundation`     |
 | **Checklist**        | Build, tests, warnings and docs confirmed                  |
 
@@ -176,11 +175,31 @@ It is filled in automatically when a PR is opened on GitHub.
 **Releasing a milestone**
 
 1. All milestone branches are merged into `main` and CI is green.
-2. `Documentation/ROADMAP.md` is updated: the milestone is marked as done.
+2. The last branch of the milestone also prepares the release:
+   - 1–3 screenshots of the milestone go to
+     `Documentation/Screenshots/v<version>/` (for example
+     `Documentation/Screenshots/v0.1.0/RotatingCube.png`) and are shown in the
+     README;
+   - `Documentation/ROADMAP.md` and the README mark the milestone as done.
 3. An annotated tag is created on `main`:
    ```
    git tag -a v0.1.0 -m "Milestone 0.1 — Foundation"
    git push origin v0.1.0
    ```
-4. A GitHub Release is created from the tag with a short changelog and
-   screenshots.
+4. The pushed tag starts the **Release** workflow
+   (`.github/workflows/Release.yml`). It builds and tests Release, checks that
+   the tag matches `project(... VERSION ...)`, packages the game with
+   `cmake --install` into `Abomination-<version>-Windows-x64.zip` and creates a
+   **draft** GitHub Release with the archive attached.
+5. The draft is finished on GitHub (*Releases → Edit*): the title gets the
+   milestone name (`Abomination 0.1 — Foundation`), the generated list of pull
+   requests is turned into a short changelog, the screenshots are added. Then
+   **Publish release**.
+
+A failed workflow is fixed with a normal pull request; the tag is then moved
+to the fixed commit (`git tag -d`, `git push --delete origin`, tag again). The
+package of any branch can be checked without a release: *Actions → Release →
+Run workflow* keeps the archive as a workflow artifact.
+
+Pull requests do not contain screenshots: the pictures of every version are
+collected in the repository instead.

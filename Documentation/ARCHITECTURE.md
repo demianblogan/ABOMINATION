@@ -59,18 +59,25 @@ code the game runs. The executable is just an entry point.
   generator, x64, vcpkg toolchain, triplet `x64-windows-static-md` (libraries
   are linked statically into the executable, the C++ runtime dynamically).
 - Code that is not available in vcpkg lives in `ThirdParty/`, each library
-  with its own small CMake target. Its formatting and names are not changed
-  (`ThirdParty/.clang-format` disables formatting).
+  with its own small CMake target and its license file. Its formatting and
+  names are not changed (`ThirdParty/.clang-format` disables formatting).
   - `ThirdParty/GLAD` — GLAD 2 loader generated for OpenGL 4.6 **Core**
     without extensions: functions removed from modern OpenGL (`glBegin`, …)
     are not even declared. vcpkg has only the old GLAD 1. The generation
     settings are written at the top of `include/glad/gl.h`.
 - `CMake/CompilerOptions.cmake` applies `/W4 /WX /permissive- /utf-8 …` to
   every target of ours; third-party headers produce no warnings.
+- `CMake/Packaging.cmake` holds the install rules: `cmake --install` collects
+  the folder a player receives (executable, `Assets/`, the Microsoft C++
+  runtime DLLs, the game license and `Licenses/` of the libraries) into
+  `Build/Package/`.
 - The version exists only in `project(... VERSION ...)`; CMake generates
   `Core/Version.cpp` from it.
 - CI (`.github/workflows/CI.yml`) builds Debug and Release and runs all tests
-  for every pull request and every push to `main`.
+  for every pull request and every push to `main`. Release
+  (`.github/workflows/Release.yml`) turns a version tag into a draft GitHub
+  Release with the game package. Both set up vcpkg with the shared action
+  `.github/actions/SetUpVcpkg`.
 
 See [BUILDING.md](BUILDING.md) for instructions.
 
@@ -83,7 +90,7 @@ A module may depend only on modules **below** it in this diagram.
 ┌───────────────────────────────────────────────┐
 │  Application   owns everything, main loop     │   top
 ├───────────────────────────────────────────────┤
-│  Game          UI          Save               │   gameplay layer
+│  Gameplay      UI          Save               │   gameplay layer
 ├───────────────────────────────────────────────┤
 │  AI       Physics      World       Audio      │   systems layer
 ├───────────────────────────────────────────────┤
@@ -101,7 +108,7 @@ A module may depend only on modules **below** it in this diagram.
 | Module        | Responsibility                                                  | Status  |
 |---------------|-----------------------------------------------------------------|---------|
 | `Core`        | Time, frame statistics, logging, files, image decoding          | 0.1     |
-| `Input`       | State of input devices, later actions and bindings (see 7)      | 0.1     |
+| `Input`       | Keyboard and mouse state, actions and bindings (see section 7)  | 0.1     |
 | `Platform`    | SDL3 window, OpenGL context creation, OS events → `Input`       | 0.1     |
 | `Renderer`    | Everything OpenGL. Exposes a high-level API (see section 6)     | 0.1     |
 | `Config`      | Loading JSON data and settings                                  | Planned |
@@ -109,7 +116,7 @@ A module may depend only on modules **below** it in this diagram.
 | `Physics`     | Quake-style movement, collision against the level               | Planned |
 | `AI`          | Enemy behaviour, pathfinding                                    | Planned |
 | `Audio`       | Sounds and music (miniaudio)                                    | Planned |
-| `Game`        | ECS components and gameplay systems: player, weapons, enemies   | Planned |
+| `Gameplay`    | Game rules: camera controllers (0.1); player, weapons, enemies  | 0.1     |
 | `UI`          | Dear ImGui debug overlay (0.1); HUD and menus (later)           | 0.1     |
 | `Save`        | Serialization of the game state                                 | Planned |
 | `Application` | Startup, shutdown, main loop, switching between game states     | 0.1     |
@@ -117,7 +124,7 @@ A module may depend only on modules **below** it in this diagram.
 **Rules**
 
 - No dependency cycles and no upward dependencies. `Renderer` never includes
-  anything from `Game`.
+  anything from `Gameplay`.
 - OpenGL is used only inside `Renderer`, SDL only inside `Platform`.
 - There is no graphics-API abstraction layer (RHI): OpenGL is the only
   backend. The boundary is the renderer's high-level API instead.
@@ -163,11 +170,16 @@ destroyed before logging stops, so the shutdown is recorded.
 
 1. `FrameTimer` measures the frame time (monotonic clock, frames longer than
    0.25 s are clamped); `FrameStatistics` remembers the last 120 frame times.
-2. `Window::ProcessEvents` handles the OS events and fills `Input::Keyboard`.
-3. Input is read (F1 toggles the debug overlay).
-4. The viewport is set to the window size and the frame is drawn.
-5. The debug overlay is drawn on top of the frame.
-6. The buffers are swapped (waiting for the monitor when V-Sync is on).
+2. `Window::ProcessEvents` handles the OS events and fills `Input::InputDevices`
+   (keyboard and mouse).
+3. `Input::ActionStates` calculates the actions from the devices and the
+   bindings; application actions are handled (F1 toggles the overlay, the
+   right mouse button captures the mouse).
+4. `Gameplay::FreeFlyCameraController` moves and turns the camera.
+5. The viewport is set to the window size and the frame is drawn through the
+   camera.
+6. The debug overlay is drawn on top of the frame.
+7. The buffers are swapped (waiting for the monitor when V-Sync is on).
 
 **Planned:**
 
@@ -233,9 +245,11 @@ Inside the renderer:
     bound to texture units.
 - Explicit `layout(location)` / `layout(binding)` everywhere: C++ constants
   and shaders agree on the numbers in advance, nothing is queried at run time.
-- `DemoScene` — a **temporary** rotating textured cube (model, view and
-  perspective projection matrices, depth test, back-face culling) used to
-  learn the basics; replaced by the high-level renderer in 0.2.
+- `Camera` — the view and projection matrices (see section 8).
+- `DemoScene` — a **temporary** rotating textured cube (model matrix of its
+  own, view and projection from the camera passed in, depth test, back-face
+  culling) used to learn the basics; replaced by the high-level renderer in
+  0.2.
 
 Color textures are uploaded as `GL_RGBA8` without gamma correction for now;
 sRGB textures and an sRGB framebuffer come with lighting in 0.5.
@@ -251,45 +265,78 @@ Input is built in layers; each layer only talks to its neighbours.
 ```
 OS → [Platform] SDL events
           │
-          ├─► ImGui first (while it captures the keyboard, the game gets no presses)
+          ├─► ImGui first (while it captures the keyboard or the mouse, the game gets no presses)
           ▼
-     [Input] device state for this frame          ← 0.1: keyboard
-          "F1 pressed this frame", "W held", mouse movement
+     [Input] InputDevices: state of the devices for this frame
+          Keyboard: "W held", "F1 pressed this frame"
+          Mouse: movement, wheel, buttons
           ▼
-     [Input] actions and bindings                  ← planned: fly camera branch (0.1)
-          ToggleDebugOverlay ← F1, MoveForward ← W / left stick
+     [Input] ActionStates: actions calculated through InputBindings
+          MoveForward ← W, LookAroundMode ← right mouse button, ToggleDebugOverlay ← F1
+          active / started this frame / stopped this frame
           ▼
-     Game code asks for actions, never for keys:
-          if (input.WasActionPressed(Action::Jump)) ...
+     Code asks for actions, never for keys:
+          if (actions.WasActionStarted(Action::ToggleDebugOverlay)) ...
+          if (actions.IsActionActive(Action::MoveForward)) ...
 ```
 
 **Principles**
 
 - Keys are **physical positions** (scancodes, USB HID codes), not characters:
   WASD stays in place on an AZERTY keyboard.
-- Every key has three states per frame: **held**, **pressed this frame**,
-  **released this frame**. Toggles use "pressed", movement uses "held".
-- The game **polls** the state once per frame instead of reacting to
+- Keys and mouse buttons have three states per frame: **held**, **pressed
+  this frame**, **released this frame**. Actions have the matching
+  **active**, **started**, **stopped**, found by comparing with the previous
+  frame, so a second binding of an active action does not start it again and
+  a tap shorter than a frame is not lost.
+- The code **polls** the state once per frame instead of reacting to
   callbacks, so input is handled at one predictable point of the frame.
-- Key repeats from the OS are ignored; all keys are released when the window
-  loses focus, so no key stays stuck after Alt+Tab.
-- The game code knows **actions**, not keys. This is what makes key
-  rebinding and gamepad support possible without changing gameplay code.
+- Key repeats from the OS are ignored; all keys and buttons are released when
+  the window loses focus, so nothing stays stuck after Alt+Tab.
+- The code knows **actions**, not keys. This is what makes key rebinding and
+  gamepad support possible without changing gameplay code.
+- Mouse movement is not an action: it is an amount per frame, read directly
+  (it will become an analog "look" input together with the gamepad sticks).
+- **Application actions** (overlay, later pause and screenshots) are handled
+  by `Application`; **gameplay actions** (movement, later firing) by gameplay
+  controllers and systems.
 
-**Ownership:** `Application` owns the input state (`Input::Keyboard`);
-`Platform::Window::ProcessEvents` fills it every frame. The window does not
-store input.
+**Ownership:** `Application` owns `Input::InputDevices`, `Input::InputBindings`
+(the defaults for now) and `Input::ActionStates`;
+`Platform::Window::ProcessEvents` fills the devices every frame. The window
+does not store input. Capturing the mouse (relative mode) is a window
+operation, so `Application` switches it when `LookAroundMode` starts/stops.
 
 **Plan**
 
-| Layer                                   | When                       |
-|-----------------------------------------|----------------------------|
-| Keyboard state                          | 0.1 — done                 |
-| Mouse state, actions and bindings       | 0.1 — `feat/fly-camera`    |
-| Gamepad (Xbox, DualSense)               | 0.7                        |
-| Bindings from settings, rebinding screen| 0.8                        |
+| Layer                                         | When         |
+|-----------------------------------------------|--------------|
+| Keyboard and mouse state, actions and bindings| 0.1 — done   |
+| Gamepad (Xbox, DualSense), analog inputs      | 0.7          |
+| Bindings from settings, rebinding screen, input contexts (menu / game) | 0.8 |
 
-## 8. Assets
+## 8. Camera
+
+- `Renderer::Camera` is the "lens": position, yaw and pitch in radians
+  (pitch clamped to ±89°, no roll), vertical FOV and clip planes; it gives
+  forward/right/up vectors and the view and projection matrices. It knows
+  nothing about input.
+- **Controllers** move a camera; there are no separate camera classes for
+  different uses. Now: `Gameplay::FreeFlyCameraController` (WASD relative to
+  the view, Q/E along the world vertical, Shift faster, mouse look while the
+  right button is held). Planned: the player's camera controller (eye height,
+  view bob, recoil), later a death camera.
+- Controllers get everything they work with as parameters
+  (`Update(camera, actions, mouse, deltaTime)`) instead of storing
+  references, which would dangle after their owner is moved.
+
+**Planned (0.2):** with ECS the camera becomes a component of an entity
+(position and rotation in its `Transform`), the free-fly controller turns
+into a debug noclip mode of the same camera, and the renderer receives only
+a `Renderer::View` (view and projection matrices, position) of the active
+camera instead of a `Camera` object.
+
+## 9. Assets
 
 **Now (0.1):**
 
@@ -321,7 +368,7 @@ store input.
 - Later: shader hot reload (0.5), packed archives with a virtual file system
   (near 1.0).
 
-## 9. ECS — Planned (0.2)
+## 10. ECS — Planned (0.2)
 
 Library: **EnTT**.
 
@@ -336,14 +383,14 @@ Library: **EnTT**.
 - Static level geometry is **not** stored as entities; it is owned by the
   `World` module in structures optimized for rendering and collision.
 
-## 10. Data-driven design — Planned
+## 11. Data-driven design — Planned
 
 - Balance values (weapon damage, enemy health, speeds) are read from
   `Assets/Configurations/*.json`.
 - User settings are stored separately in the user's folder
   (`%APPDATA%/AloneBull/Abomination/`), never in `Assets/`.
 
-## 11. Save system — Planned (0.8)
+## 12. Save system — Planned (0.8)
 
 Every gameplay component must be serializable. Rules to follow from 0.2:
 
@@ -351,7 +398,7 @@ Every gameplay component must be serializable. Rules to follow from 0.2:
   stored as entity IDs, references to resources as asset IDs/paths.
 - No hidden state in systems that would be lost on save/load.
 
-## 12. Threading
+## 13. Threading
 
 Single-threaded for now. Candidates for background threads later: asset
 loading, audio (miniaudio already runs its own thread), lightmap baking.

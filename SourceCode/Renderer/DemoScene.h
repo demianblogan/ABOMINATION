@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Renderer/Camera.h"
 #include "Renderer/GLBuffer.h"
 #include "Renderer/GLShaderProgram.h"
 #include "Renderer/GLTexture.h"
@@ -19,9 +20,9 @@ namespace Abomination::Renderer
         // Loads the shaders and the texture from assetsDirectory and uploads the geometry to the GPU.
         [[nodiscard]] static std::expected<DemoScene, std::string> Create(const std::filesystem::path& assetsDirectory);
 
-        // Draws the scene into the current frame. time (in seconds) drives the rotation; the size of the drawable
-        // area gives the aspect ratio for the perspective projection.
-        void Draw(double time, int widthInPixels, int heightInPixels) const;
+        // Draws the scene into the current frame as seen through the camera. time (in seconds) drives the rotation;
+        // the size of the drawable area gives the aspect ratio for the perspective projection.
+        void Draw(double time, const Camera& camera, int widthInPixels, int heightInPixels) const;
 
     private:
         DemoScene(GLShaderProgram shaderProgram, GLTexture texture, GLBuffer vertexBuffer, GLBuffer indexBuffer,

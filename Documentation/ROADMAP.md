@@ -21,7 +21,7 @@ we now* and *what comes next*.
 
 | Version | Name                   | Status | Gameplay                                              | Visual / OpenGL                                          |
 |---------|------------------------|--------|-------------------------------------------------------|----------------------------------------------------------|
-| 0.1     | Foundation             | 🔨     | Free-fly (noclip) camera                              | Window, OpenGL 4.6 context, debug output, textured cube, ImGui overlay |
+| 0.1     | Foundation             | ✅     | Free-fly (noclip) camera                              | Window, OpenGL 4.6 context, debug output, textured cube, ImGui overlay |
 | 0.2     | First Steps            | ⏳     | Quake-style movement, collision with the level        | EnTT, resource manager, TrenchBroom map loading, brush texturing |
 | 0.3     | Boomstick              | ⏳     | First hitscan weapon, damage, sound                   | View model with sway/bob/recoil, muzzle flash, particles, decals, glTF loading |
 | 0.4     | It Moves               | ⏳     | First enemy: AI, navmesh, health, death, HUD          | Skeletal animation, text rendering                       |
@@ -32,7 +32,7 @@ we now* and *what comes next*.
 | 0.9     | Content Complete (Beta)| ⏳     | All 4 episodes, bosses, story texts, achievements, DualSense features | Episode palettes, polish, optimization |
 | 1.0     | Release                | ⏳     | Balance, bug fixes                                    | —                                                        |
 
-## 0.1 — Foundation 🔨
+## 0.1 — Foundation ✅
 
 **Goal:** a professional project skeleton and the first 3D image on screen
 that you can fly around.
@@ -45,11 +45,13 @@ that you can fly around.
 | 4 | `feat/window-gl-context`        | ✅     | SDL3 window, OpenGL 4.6 Core context, GLAD 2 loader, debug output, frame timer, animated clear color |
 | 5 | `feat/debug-overlay`            | ✅     | Dear ImGui overlay: version, GPU, FPS, frame time graph; keyboard state (`Input` module), F1 toggle |
 | 6 | `feat/textured-cube`            | ✅     | Assets folder copied next to the executable, JetBrains Mono for the overlay; shaders, buffers, vertex array, texture with DSA and RAII wrappers; rotating textured cube with MVP matrices, depth test and face culling |
-| 7 | `feat/fly-camera`               | ⏳     | Mouse state, input actions and bindings (F1 becomes `ToggleDebugOverlay`), camera, mouse + WASD flight, first math unit tests |
+| 7 | `feat/fly-camera`               | ✅     | Mouse state, input actions and bindings, `Renderer::Camera` (yaw, pitch, perspective) with math tests, free-fly camera: WASD, Q/E, Shift, mouse look with the right button; dark gray background |
 
 **Done when:** the game opens a window, shows a textured cube that can be
 examined with a free-fly camera, the debug overlay shows FPS, CI builds and
 tests every PR.
+
+![0.1 Foundation: a rotating textured cube with the debug overlay](Screenshots/v0.1.0/RotatingCube.png)
 
 ## Later milestones
 
@@ -59,9 +61,11 @@ far:
 - **0.2** — decide collision approach: own AABB-vs-brush collision with a BVH;
   Jolt Physics only for queries if it becomes necessary. Learn TrenchBroom:
   game configuration, entity definitions, `.map` format, Z-up → Y-up.
-  Asset manager (see ARCHITECTURE.md, section 8): typed handles, a cache by
+  Asset manager (see ARCHITECTURE.md, section 9): typed handles, a cache by
   path, global and per-level groups, a fallback texture; `DemoScene` is
-  replaced by the high-level renderer.
+  replaced by the high-level renderer. The camera becomes an ECS component and
+  the renderer receives only a `View` (see ARCHITECTURE.md, section 8); the
+  free-fly controller becomes a debug noclip mode next to the player camera.
 - **0.3** — asset pipeline decision: where models come from (generated,
   downloaded, bought) and how they are imported. Audio via miniaudio.
 - **0.4** — navmesh via Recast/Detour for ground enemies; flying enemies need

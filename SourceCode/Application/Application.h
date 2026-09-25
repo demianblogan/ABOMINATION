@@ -1,8 +1,12 @@
 #pragma once
 
-#include "Input/Keyboard.h"
+#include "Gameplay/FreeFlyCameraController.h"
+#include "Input/ActionStates.h"
+#include "Input/InputBindings.h"
+#include "Input/InputDevices.h"
 #include "Platform/SDLLibrary.h"
 #include "Platform/Window.h"
+#include "Renderer/Camera.h"
 #include "Renderer/DemoScene.h"
 #include "UI/DebugOverlay.h"
 
@@ -33,9 +37,17 @@ namespace Abomination
         Platform::SDLLibrary m_SDLLibrary;
         Platform::Window m_window;
         Renderer::DemoScene m_demoScene;
+
+        // The camera the scene is drawn through, and the controller that flies it.
+        Renderer::Camera m_camera;
+        Gameplay::FreeFlyCameraController m_cameraController;
         UI::DebugOverlay m_debugOverlay;
 
-        // State of the keyboard for the current frame: the window fills it, the game reads it.
-        Input::Keyboard m_keyboard;
+        // State of the keyboard and the mouse for the current frame: the window fills it, the game reads it.
+        Input::InputDevices m_inputDevices;
+
+        // Which keys and buttons trigger which actions, and the state of every action for the current frame.
+        Input::InputBindings m_inputBindings = Input::InputBindings::CreateDefault();
+        Input::ActionStates m_actionStates;
     };
 }

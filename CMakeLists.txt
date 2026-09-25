@@ -31,5 +31,8 @@ add_subdirectory(SourceCode)
 enable_testing()
 add_subdirectory(Tests)
 
+# --- Packaging ---------------------------------------------------------------
+include(CMake/Packaging.cmake)
+
 # Make the game the default project to run in Visual Studio (F5).
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Abomination)

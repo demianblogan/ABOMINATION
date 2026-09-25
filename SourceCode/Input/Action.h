@@ -1,0 +1,33 @@
+#pragma once
+
+#include <cstddef>
+#include <cstdint>
+#include <utility>
+
+namespace Abomination::Input
+{
+    // Something the player or the developer wants to do, independent of which key or button does it.
+    // Game code asks for actions, never for keys; InputBindings decides which inputs trigger each action,
+    // so keys can be rebound (milestone 0.8) and a gamepad added (0.7) without changing game code.
+    // New actions are added here when the game needs them.
+    enum class Action : std::uint8_t
+    {
+        // Free-fly camera
+        MoveForward,
+        MoveBackward,
+        MoveLeft,
+        MoveRight,
+        MoveUp,
+        MoveDown,
+        MoveFaster,
+        LookAroundMode,
+
+        // Developer tools
+        ToggleDebugOverlay,
+
+        // Not an action: the number of actions above. Must stay the last value.
+        Count,
+    };
+
+    inline constexpr std::size_t ActionCount = std::to_underlying(Action::Count);
+}

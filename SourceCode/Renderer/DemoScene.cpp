@@ -1,11 +1,9 @@
 #include "Renderer/DemoScene.h"
 
 #include <glad/gl.h>
-#include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/geometric.hpp>
 #include <glm/mat4x4.hpp>
-#include <glm/trigonometric.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 
@@ -89,18 +87,6 @@ namespace Abomination::Renderer
         // Must match layout(binding = N) of uniAlbedoTexture in TexturedMesh.frag.
         constexpr std::uint32_t AlbedoTextureUnit = 0;
 
-        // The camera: where it stands, what it looks at, which direction is "up" for it.
-        constexpr glm::vec3 CameraPosition{0.0f, 0.0f, 2.5f};
-        constexpr glm::vec3 CameraTarget{0.0f, 0.0f, 0.0f};
-        constexpr glm::vec3 CameraUp{0.0f, 1.0f, 0.0f};
-
-        // Vertical field of view (FOV): how wide the camera sees from the bottom edge of the screen to the top edge.
-        constexpr float VerticalFOVDegrees = 60.0f;
-
-        // Nothing closer than NearPlane or farther than FarPlane (in meters) from the camera is drawn.
-        constexpr float NearPlane = 0.1f;
-        constexpr float FarPlane = 100.0f;
-
         // The cube turns around a tilted axis, so that its top, bottom and sides all come into view.
         constexpr float RotationSpeed = 0.8f; // Radians per second
         constexpr glm::vec3 RotationAxis{0.6f, 1.0f, 0.0f};
@@ -143,7 +129,7 @@ namespace Abomination::Renderer
         , m_vertexArray(std::move(vertexArray))
     {}
 
-    void DemoScene::Draw(double time, int widthInPixels, int heightInPixels) const
+    void DemoScene::Draw(double time, const Camera& camera, int widthInPixels, int heightInPixels) const
     {
         // A minimized window has a height of 0: there is nothing to draw, and the aspect ratio would divide by zero.
         if (widthInPixels <= 0 || heightInPixels <= 0)
@@ -154,18 +140,13 @@ namespace Abomination::Renderer
         const float angle = static_cast<float>(time) * RotationSpeed;
         const glm::mat4 model = glm::rotate(glm::mat4(1.0f), angle, glm::normalize(RotationAxis));
 
-        // 2. View matrix: glm::lookAt builds the matrix that moves the whole world so the camera ends up at the origin
-        //    looking along -Z. In OpenGL it is the world that moves, not the camera.
-        const glm::mat4 view = glm::lookAt(CameraPosition, CameraTarget, CameraUp);
-
-        // 3. Projection matrix: perspective with the field of view and the aspect ratio (width / height) of the window.
-        //    The aspect ratio stretches the picture back, so a square stays a square in a wide window.
+        // 2. View and projection matrices come from the camera. The aspect ratio (width / height) of the window keeps
+        //    a square a square in a wide window.
         const float aspectRatio = static_cast<float>(widthInPixels) / static_cast<float>(heightInPixels);
-        const glm::mat4 projection = glm::perspective(glm::radians(VerticalFOVDegrees), aspectRatio, NearPlane, FarPlane);
 
         m_shaderProgram.SetUniform(ModelUniform, model);
-        m_shaderProgram.SetUniform(ViewUniform, view);
-        m_shaderProgram.SetUniform(ProjectionUniform, projection);
+        m_shaderProgram.SetUniform(ViewUniform, camera.GetViewMatrix());
+        m_shaderProgram.SetUniform(ProjectionUniform, camera.GetProjectionMatrix(aspectRatio));
 
         // Depth test: for every pixel the depth buffer remembers how far the closest surface drawn there is.
         // A new pixel is drawn only if it is closer (GL_LESS, the default); otherwise it is hidden and thrown away.

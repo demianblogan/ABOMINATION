@@ -4,9 +4,11 @@
 #include "Core/AssetHandle.h"
 #include "Renderer/GLShaderProgram.h"
 
+#include <cstddef>
 #include <expected>
 #include <filesystem>
 #include <string>
+#include <unordered_set>
 
 namespace Abomination::Renderer
 {
@@ -36,13 +38,32 @@ namespace Abomination::Renderer
         // The program of the handle. An invalid handle gives the fallback program.
         [[nodiscard]] const GLShaderProgram& Get(ShaderHandle handle) const;
 
+        // Calls visitor(name, isFallback) for every loaded program; isFallback is true for a program replaced by the
+        // magenta fallback. For the Assets window of the debug overlay.
+        template <typename Visitor>
+        void VisitPrograms(Visitor&& visitor) const;
+
+        [[nodiscard]] std::size_t GetCount() const noexcept;
+
     private:
         ShaderStore(std::filesystem::path assetsDirectory, GLShaderProgram fallbackProgram) noexcept;
 
         std::filesystem::path m_assetsDirectory;
         Core::AssetCache<GLShaderProgram> m_cache;
 
+        // Names of programs that could not be loaded or compiled and hold the fallback instead.
+        std::unordered_set<std::string> m_fallbackNames;
+
         // Returned by Get() for invalid handles.
         GLShaderProgram m_fallbackProgram;
     };
+
+    template <typename Visitor>
+    void ShaderStore::VisitPrograms(Visitor&& visitor) const
+    {
+        m_cache.VisitAssets([&](const std::string& name, const GLShaderProgram&)
+        {
+            visitor(name, m_fallbackNames.contains(name));
+        });
+    }
 }

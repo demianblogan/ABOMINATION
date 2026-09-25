@@ -53,7 +53,7 @@ namespace Abomination::Renderer
         glTextureParameteri(textureID, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTextureParameteri(textureID, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-        return GLTexture(textureID);
+        return GLTexture(textureID, image.width, image.height);
     }
 
     std::expected<GLTexture, std::string> GLTexture::CreateFromFile(const std::filesystem::path& path)
@@ -65,12 +65,16 @@ namespace Abomination::Renderer
         return CreateFromImage(*image);
     }
 
-    GLTexture::GLTexture(std::uint32_t textureID) noexcept
+    GLTexture::GLTexture(std::uint32_t textureID, int width, int height) noexcept
         : m_textureID(textureID)
+        , m_width(width)
+        , m_height(height)
     {}
 
     GLTexture::GLTexture(GLTexture&& other) noexcept
         : m_textureID(std::exchange(other.m_textureID, 0))
+        , m_width(other.m_width)
+        , m_height(other.m_height)
     {}
 
     GLTexture& GLTexture::operator=(GLTexture&& other) noexcept
@@ -80,6 +84,8 @@ namespace Abomination::Renderer
             // glDelete* functions ignore the ID 0, so a moved-from object needs no special check.
             glDeleteTextures(1, &m_textureID);
             m_textureID = std::exchange(other.m_textureID, 0);
+            m_width = other.m_width;
+            m_height = other.m_height;
         }
 
         return *this;
@@ -94,5 +100,39 @@ namespace Abomination::Renderer
     {
         // Direct State Access: one call instead of glActiveTexture(GL_TEXTURE0 + unit) + glBindTexture(GL_TEXTURE_2D, id).
         glBindTextureUnit(unit, m_textureID);
+    }
+
+    int GLTexture::GetWidth() const noexcept
+    {
+        return m_width;
+    }
+
+    int GLTexture::GetHeight() const noexcept
+    {
+        return m_height;
+    }
+
+    std::size_t GLTexture::GetVideoMemorySize() const noexcept
+    {
+        return CalculateVideoMemorySize(m_width, m_height);
+    }
+
+    std::size_t GLTexture::CalculateVideoMemorySize(int width, int height) noexcept
+    {
+        // Every mipmap level is half the size of the previous one (at least 1 texel); GL_RGBA8 takes 4 bytes per texel.
+        // For 64x64: 64*64 + 32*32 + 16*16 + 8*8 + 4*4 + 2*2 + 1*1 = 5461 texels = 21844 bytes, about 4/3 of level 0.
+        constexpr std::size_t BytesPerTexel = 4;
+
+        std::size_t texelCount = 0;
+        const int mipmapLevelCount = CalculateMipmapLevelCount(width, height);
+        for (int level = 0; level < mipmapLevelCount; ++level)
+        {
+            // width >> level is width / 2^level: the size of this level.
+            const auto levelWidth = static_cast<std::size_t>(std::max(width >> level, 1));
+            const auto levelHeight = static_cast<std::size_t>(std::max(height >> level, 1));
+            texelCount += levelWidth * levelHeight;
+        }
+
+        return texelCount * BytesPerTexel;
     }
 }

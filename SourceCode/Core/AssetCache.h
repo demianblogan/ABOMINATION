@@ -46,6 +46,11 @@ namespace Abomination::Core
         // How many assets are stored.
         [[nodiscard]] std::size_t GetCount() const noexcept;
 
+        // Calls visitor(path, asset) for every stored asset, in slot order. For tools that list the assets
+        // (the Assets window of the debug overlay). The visitor must not add or remove assets.
+        template <typename Visitor>
+        void VisitAssets(Visitor&& visitor) const;
+
     private:
         struct Slot
         {
@@ -188,5 +193,15 @@ namespace Abomination::Core
     std::size_t AssetCache<Asset>::GetCount() const noexcept
     {
         return m_handlesByPath.size();
+    }
+
+    template <typename Asset>
+    template <typename Visitor>
+    void AssetCache<Asset>::VisitAssets(Visitor&& visitor) const
+    {
+        // Free slots are skipped: they hold no asset.
+        for (const Slot& slot : m_slots)
+            if (slot.asset.has_value())
+                visitor(slot.path, *slot.asset);
     }
 }

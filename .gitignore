@@ -25,7 +25,7 @@ CMakeFiles/
 # --- Runtime files written by the game ---
 /saves/
 *.log
-imgui.ini
+DebugOverlay.ini
 
 # --- OS ---
 Thumbs.db

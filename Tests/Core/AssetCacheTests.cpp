@@ -94,6 +94,22 @@ namespace Abomination::Core
         EXPECT_EQ(*m_cache.Get(otherHandle), "wall");
     }
 
+    TEST_F(AssetCacheTest, VisitAssetsSkipsRemovedAssets)
+    {
+        m_cache.Add("Textures/Crate.png", "crate");
+        const AssetHandle<std::string> wallHandle = m_cache.Add("Textures/Wall.png", "wall");
+        m_cache.Add("Textures/Door.png", "door");
+        m_cache.Remove(wallHandle);
+
+        std::string visited;
+        m_cache.VisitAssets([&](const std::string& path, const std::string& asset)
+        {
+            visited += path + "=" + asset + ";";
+        });
+
+        EXPECT_EQ(visited, "Textures/Crate.png=crate;Textures/Door.png=door;");
+    }
+
     TEST(AssetCache, StoresMoveOnlyAssets)
     {
         // GPU resources (GLTexture, GLShaderProgram) can be moved but not copied; the cache must accept them.

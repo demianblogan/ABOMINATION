@@ -58,8 +58,9 @@ namespace Abomination
 
         Renderer::DemoScene demoScene = Renderer::DemoScene::Create(renderAssets);
 
-        const std::filesystem::path debugUIFontPath = assetsDirectory / "Fonts" / "JetBrainsMonoRegular.ttf";
-        std::expected<UI::DebugOverlay, std::string> debugOverlay = UI::DebugOverlay::Create(*window, debugUIFontPath);
+        // The overlay reads its font from the assets and keeps its window settings next to the executable, like the log.
+        std::expected<UI::DebugOverlay, std::string> debugOverlay =
+            UI::DebugOverlay::Create(*window, assetsDirectory, Platform::GetExecutableDirectory());
         if (!debugOverlay.has_value())
             return std::unexpected(debugOverlay.error());
 
@@ -163,6 +164,7 @@ namespace Abomination
             .fixedTimestep = m_fixedTimestep,
             .window = m_window,
             .frameLimiter = m_frameLimiter,
+            .renderAssets = m_renderAssets,
         });
 
         m_window.SwapBuffers();

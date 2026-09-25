@@ -4,8 +4,10 @@
 #include "Core/AssetHandle.h"
 #include "Renderer/GLTexture.h"
 
+#include <cstddef>
 #include <filesystem>
 #include <string>
+#include <unordered_set>
 
 namespace Abomination::Renderer
 {
@@ -32,11 +34,30 @@ namespace Abomination::Renderer
         // checkerboard, so drawing code never has to check for nullptr.
         [[nodiscard]] const GLTexture& Get(TextureHandle handle) const;
 
+        // Calls visitor(path, texture, isFallback) for every loaded texture; isFallback is true for a missing or broken
+        // file replaced by the checkerboard. For the Assets window of the debug overlay.
+        template <typename Visitor>
+        void VisitTextures(Visitor&& visitor) const;
+
+        [[nodiscard]] std::size_t GetCount() const noexcept;
+
     private:
         std::filesystem::path m_assetsDirectory;
         Core::AssetCache<GLTexture> m_cache;
 
+        // Paths whose file could not be loaded and which hold a checkerboard instead.
+        std::unordered_set<std::string> m_fallbackPaths;
+
         // Returned by Get() for invalid handles.
         GLTexture m_fallbackTexture;
     };
+
+    template <typename Visitor>
+    void TextureStore::VisitTextures(Visitor&& visitor) const
+    {
+        m_cache.VisitAssets([&](const std::string& path, const GLTexture& texture)
+        {
+            visitor(path, texture, m_fallbackPaths.contains(path));
+        });
+    }
 }

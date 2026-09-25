@@ -92,6 +92,8 @@ namespace Abomination::Renderer
         if (!fallbackProgram.has_value())
             return ShaderHandle{};
 
+        m_fallbackNames.insert(name);
+
         return m_cache.Add(name, std::move(*fallbackProgram));
     }
 
@@ -102,5 +104,10 @@ namespace Abomination::Renderer
             return m_fallbackProgram;
 
         return *program;
+    }
+
+    std::size_t ShaderStore::GetCount() const noexcept
+    {
+        return m_cache.GetCount();
     }
 }

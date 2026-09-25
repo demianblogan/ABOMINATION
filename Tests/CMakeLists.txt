@@ -21,6 +21,7 @@ set(TEST_SOURCES
     Input/MouseTests.cpp
 
     Renderer/CameraTests.cpp
+    Renderer/GLTextureTests.cpp
 )
 
 add_executable(AbominationTests

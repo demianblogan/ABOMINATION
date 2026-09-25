@@ -7,11 +7,13 @@
 #include "Core/Version.h"
 #include "Platform/Window.h"
 #include "Renderer/OpenGLLoader.h"
+#include "Renderer/RenderAssets.h"
 
 #include <imgui.h>
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <format>
 #include <span>
 #include <string_view>
@@ -21,6 +23,10 @@ namespace Abomination::UI
 {
     namespace
     {
+        // The files of the overlay, relative to the folders given to Create().
+        constexpr std::string_view FontFileName = "Fonts/JetBrainsMonoRegular.ttf";
+        constexpr std::string_view SettingsFileName = "DebugOverlay.ini";
+
         // Distance from the edges of the game window (below the menu bar) to the performance window, in pixels.
         constexpr float PerformanceWindowMargin = 10.0f;
 
@@ -56,6 +62,43 @@ namespace Abomination::UI
                                                             ImGuiWindowFlags_NoSavedSettings |
                                                             ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 
+        // The Assets window opens for the first time to the right of the performance window; later ImGui restores the
+        // position and size it was left at.
+        constexpr ImVec2 AssetsWindowInitialPosition(450.0f, 40.0f);
+        constexpr ImVec2 AssetsWindowInitialSize(620.0f, 360.0f);
+
+        // The color of assets replaced by a fallback: the same magenta as the fallbacks themselves.
+        constexpr ImVec4 FallbackTextColor(1.0f, 0.0f, 1.0f, 1.0f);
+
+        // The Status cell of an asset: "Loaded", or a magenta "Fallback" with a tooltip that explains it.
+        void DrawAssetStatus(bool isFallback)
+        {
+            if (!isFallback)
+            {
+                ImGui::TextUnformatted("Loaded");
+
+                return;
+            }
+
+            ImGui::TextColored(FallbackTextColor, "Fallback");
+            ImGui::SetItemTooltip("The file is missing or broken; the log says why.");
+        }
+
+        // "512 B", "21.3 KB" or "4.0 MB": a size in bytes for people to read.
+        std::string FormatByteSize(std::size_t byteCount)
+        {
+            constexpr double BytesPerKilobyte = 1024.0;
+            constexpr double BytesPerMegabyte = BytesPerKilobyte * 1024.0;
+
+            const auto bytes = static_cast<double>(byteCount);
+            if (bytes >= BytesPerMegabyte)
+                return std::format("{:.1f} MB", bytes / BytesPerMegabyte);
+            if (bytes >= BytesPerKilobyte)
+                return std::format("{:.1f} KB", bytes / BytesPerKilobyte);
+
+            return std::format("{} B", byteCount);
+        }
+
         // "Unlimited" or "144 FPS": the text of a frame rate limit in the menu and in the performance window.
         std::string FormatFramesPerSecondLimit(int maxFramesPerSecond)
         {
@@ -67,10 +110,12 @@ namespace Abomination::UI
     }
 
     std::expected<DebugOverlay, std::string> DebugOverlay::Create(const Platform::Window& window,
-                                                                  const std::filesystem::path& fontPath)
+                                                                  const std::filesystem::path& assetsDirectory,
+                                                                  const std::filesystem::path& settingsDirectory)
     {
         // The order matters: the context first, then the backends that register themselves in it.
-        std::expected<ImGuiLibrary, std::string> library = ImGuiLibrary::Initialize(fontPath);
+        std::expected<ImGuiLibrary, std::string> library =
+            ImGuiLibrary::Initialize(assetsDirectory / FontFileName, settingsDirectory / SettingsFileName);
         if (!library.has_value())
             return std::unexpected(library.error());
 
@@ -113,11 +158,17 @@ namespace Abomination::UI
 
             if (m_isPerformanceWindowOpen)
                 DrawPerformanceWindow(context);
+
+            if (m_isAssetsWindowOpen)
+                DrawAssetsWindow(context);
         }
 
         // 3. ImGui turns the recorded windows into lists of triangles, and the OpenGL backend draws them.
         ImGui::Render();
         m_rendererBackend.DrawFrame();
+
+        // 4. Remember moved or resized windows for the next run.
+        m_library.SaveSettingsIfChanged();
     }
 
     void DebugOverlay::ToggleVisibility() noexcept
@@ -141,6 +192,7 @@ namespace Abomination::UI
         {
             // MenuItem(label, shortcut, bool*) shows a check mark and flips the bool when clicked.
             ImGui::MenuItem("Performance", nullptr, &m_isPerformanceWindowOpen);
+            ImGui::MenuItem("Assets", nullptr, &m_isAssetsWindowOpen);
             ImGui::EndMenu();
         }
 
@@ -241,6 +293,87 @@ namespace Abomination::UI
 
             ImGui::PlotLines("##FrameTimes", frameTimeSamples.data(), static_cast<int>(frameTimeSamples.size()),
                              oldestSampleIndex, graphCaption.c_str(), 0.0f, graphTop, ImVec2(GraphWidth, GraphHeight));
+        }
+        ImGui::End();
+    }
+
+    void DebugOverlay::DrawAssetsWindow(const DebugOverlayContext& context)
+    {
+        // ImGuiCond_FirstUseEver applies the position and size only when the settings file does not know the window yet:
+        // afterwards the window opens where it was left.
+        ImGui::SetNextWindowPos(AssetsWindowInitialPosition, ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(AssetsWindowInitialSize, ImGuiCond_FirstUseEver);
+
+        if (ImGui::Begin("Assets", &m_isAssetsWindowOpen))
+        {
+            const Renderer::RenderAssets& assets = context.renderAssets;
+
+            // The header shows the totals, so they are summed before the list is drawn.
+            std::size_t totalTextureMemory = 0;
+            assets.textures.VisitTextures([&](const std::string&, const Renderer::GLTexture& texture, bool)
+            {
+                totalTextureMemory += texture.GetVideoMemorySize();
+            });
+
+            // A collapsing header is a clickable bar that shows or hides what follows it. The text after "###" is the ID
+            // ImGui remembers the header by: the visible label changes with the numbers, the ID must stay the same.
+            const std::string texturesHeader = std::format("Textures: {}, {} of video memory###Textures",
+                                                           assets.textures.GetCount(), FormatByteSize(totalTextureMemory));
+            if (ImGui::CollapsingHeader(texturesHeader.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                // A table: columns are set up once, then every row is filled cell by cell with TableNextColumn().
+                // RowBg alternates the row background, Borders draws the lines between cells.
+                if (ImGui::BeginTable("TextureTable", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders))
+                {
+                    // The path takes all the width the other columns leave; the others are as wide as their contents.
+                    ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch);
+                    ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed);
+                    ImGui::TableSetupColumn("Video memory", ImGuiTableColumnFlags_WidthFixed);
+                    ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthFixed);
+                    ImGui::TableHeadersRow();
+
+                    assets.textures.VisitTextures([](const std::string& path, const Renderer::GLTexture& texture,
+                                                     bool isFallback)
+                    {
+                        ImGui::TableNextColumn();
+                        ImGui::TextUnformatted(path.c_str());
+
+                        ImGui::TableNextColumn();
+                        const std::string sizeText = std::format("{}x{}", texture.GetWidth(), texture.GetHeight());
+                        ImGui::TextUnformatted(sizeText.c_str());
+
+                        ImGui::TableNextColumn();
+                        ImGui::TextUnformatted(FormatByteSize(texture.GetVideoMemorySize()).c_str());
+
+                        ImGui::TableNextColumn();
+                        DrawAssetStatus(isFallback);
+                    });
+
+                    ImGui::EndTable();
+                }
+            }
+
+            const std::string programsHeader = std::format("Shader programs: {}###ShaderPrograms", assets.shaders.GetCount());
+            if (ImGui::CollapsingHeader(programsHeader.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                if (ImGui::BeginTable("ShaderProgramTable", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders))
+                {
+                    ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch);
+                    ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthFixed);
+                    ImGui::TableHeadersRow();
+
+                    assets.shaders.VisitPrograms([](const std::string& name, bool isFallback)
+                    {
+                        ImGui::TableNextColumn();
+                        ImGui::TextUnformatted(name.c_str());
+
+                        ImGui::TableNextColumn();
+                        DrawAssetStatus(isFallback);
+                    });
+
+                    ImGui::EndTable();
+                }
+            }
         }
         ImGui::End();
     }

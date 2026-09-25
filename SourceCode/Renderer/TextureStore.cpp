@@ -66,6 +66,8 @@ namespace Abomination::Renderer
             Core::Log::Write(LogCategory::Renderer, LogLevel::Warning, "Texture {} replaced by the fallback: {}", path,
                              texture.error());
 
+            m_fallbackPaths.insert(path);
+
             return m_cache.Add(path, CreateFallbackTexture());
         }
 
@@ -81,5 +83,10 @@ namespace Abomination::Renderer
             return m_fallbackTexture;
 
         return *texture;
+    }
+
+    std::size_t TextureStore::GetCount() const noexcept
+    {
+        return m_cache.GetCount();
     }
 }

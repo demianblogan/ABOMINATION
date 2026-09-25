@@ -90,11 +90,13 @@ namespace Abomination
 
             // While LookAroundMode is active (the right mouse button by default), the mouse is captured for looking around,
             // like in the Unity and Unreal editors. The mode is switched only when the action starts or stops.
-            // This moves to the fly camera controller together with the camera.
+            // Capturing is done here because the window belongs to the application; the controller only turns the camera.
             if (m_actionStates.WasActionStarted(Input::Action::LookAroundMode))
                 m_window.SetRelativeMouseMode(true);
             if (m_actionStates.WasActionStopped(Input::Action::LookAroundMode))
                 m_window.SetRelativeMouseMode(false);
+
+            m_cameraController.Update(m_camera, m_actionStates, m_inputDevices.mouse, frameTimer.GetDeltaTime());
 
             Renderer::SetViewport(m_window.GetWidthInPixels(), m_window.GetHeightInPixels());
             Renderer::ClearFrame(BackgroundColor);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Gameplay/FreeFlyCameraController.h"
 #include "Input/ActionStates.h"
 #include "Input/InputBindings.h"
 #include "Input/InputDevices.h"
@@ -37,8 +38,9 @@ namespace Abomination
         Platform::Window m_window;
         Renderer::DemoScene m_demoScene;
 
-        // The camera the scene is drawn through.
+        // The camera the scene is drawn through, and the controller that flies it.
         Renderer::Camera m_camera;
+        Gameplay::FreeFlyCameraController m_cameraController;
         UI::DebugOverlay m_debugOverlay;
 
         // State of the keyboard and the mouse for the current frame: the window fills it, the game reads it.

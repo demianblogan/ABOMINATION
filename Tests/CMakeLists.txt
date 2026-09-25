@@ -10,6 +10,8 @@ set(TEST_SOURCES
     Core/LogTests.cpp
     Core/VersionTests.cpp
 
+    Gameplay/FreeFlyCameraControllerTests.cpp
+
     Input/ActionStatesTests.cpp
     Input/InputBindingsTests.cpp
     Input/KeyboardTests.cpp

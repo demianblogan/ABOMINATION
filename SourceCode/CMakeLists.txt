@@ -31,6 +31,9 @@ set(LIBRARY_SOURCES
     Core/Version.h
     Core/Version.cpp.in
 
+    Gameplay/FreeFlyCameraController.h
+    Gameplay/FreeFlyCameraController.cpp
+
     Input/Action.h
     Input/ActionStates.h
     Input/ActionStates.cpp

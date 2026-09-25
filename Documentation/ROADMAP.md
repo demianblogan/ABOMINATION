@@ -22,7 +22,7 @@ we now* and *what comes next*.
 | Version | Name                   | Status | Gameplay                                              | Visual / OpenGL                                          |
 |---------|------------------------|--------|-------------------------------------------------------|----------------------------------------------------------|
 | 0.1     | Foundation             | ✅     | Free-fly (noclip) camera                              | Window, OpenGL 4.6 context, debug output, textured cube, ImGui overlay |
-| 0.2     | First Steps            | ⏳     | Quake-style movement, collision with the level        | EnTT, resource manager, TrenchBroom map loading, brush texturing |
+| 0.2     | First Steps            | 🔨     | Quake-style movement, collision with the level        | EnTT, resource manager, TrenchBroom map loading, brush texturing |
 | 0.3     | Boomstick              | ⏳     | First hitscan weapon, damage, sound                   | View model with sway/bob/recoil, muzzle flash, particles, decals, glTF loading |
 | 0.4     | It Moves               | ⏳     | First enemy: AI, navmesh, health, death, HUD          | Skeletal animation, text rendering                       |
 | 0.5     | Lights                 | ⏳     | Glowing projectiles, dynamic light in combat          | Lightmap baking, shadows, HDR, bloom, gamma              |
@@ -53,6 +53,28 @@ tests every PR.
 
 ![0.1 Foundation: a rotating textured cube with the debug overlay](Screenshots/v0.1.0/RotatingCube.png)
 
+## 0.2 — First Steps 🔨
+
+**Goal:** load a level built in TrenchBroom and run and jump around it with
+Quake-style movement.
+
+Every branch ends with something visible in the game. Systems that cannot be
+seen (collision, map geometry) get debug visualizations in the overlay.
+
+| # | Branch                          | Status | Content                                                                 |
+|---|---------------------------------|--------|-------------------------------------------------------------------------|
+| 1 | `feat/fixed-timestep`           | ✅     | Debug menu bar (View, Settings > Display), V-Sync toggle, FPS limit; fixed 60 Hz simulation ticks with interpolation; main loop split into `Update`, `FixedUpdate`, `Render` |
+| 2 | `feat/asset-manager`            | ⏳     | Typed asset handles, cache by path, magenta fallback texture; list of loaded assets in the overlay |
+| 3 | `feat/ecs-scene`                | ⏳     | EnTT: entities with transform and mesh, render system, camera as a component, interpolation as a system; `DemoScene` removed; entity inspector |
+| 4 | `feat/map-geometry`             | ⏳     | TrenchBroom game configuration, `.map` parser, brushes → polygons (plane intersection), Z-up → Y-up; solid and wireframe render modes, map statistics |
+| 5 | `feat/brush-textures`           | ⏳     | Texture coordinates from the Valve 220 format, drawing grouped by texture |
+| 6 | `feat/collision`                | ⏳     | Axis-aligned box traced against brushes (Quake-style), debug drawing of boxes and traces |
+| 7 | `feat/player-movement`          | ⏳     | Quake movement: acceleration, friction, jumping, gravity, sliding along walls, stepping up stairs; noclip toggle; speedometer |
+
+**Done when:** a level made in TrenchBroom loads with textures, the player
+walks, runs and jumps on it and collides with its walls, movement behaves the
+same at any frame rate.
+
 ## Later milestones
 
 Detailed branch plans are written when a milestone starts. Notes collected so
@@ -73,7 +95,11 @@ far:
 - **0.5** — own lightmap compiler as part of the level compiler; sRGB textures
   and framebuffer (gamma correction) together with lighting; shader hot reload.
 - **0.8** — every gameplay component must be serializable; keep this in mind
-  from 0.2 onwards.
+  from 0.2 onwards. Options menu, *Display > FPS limit*: a list of common
+  monitor refresh rates (30, 60, 75, 90, 100, 120, 144, 165, 180, 240, 280,
+  360, Unlimited) plus the refresh rate of the player's monitor detected
+  through SDL; a separate lower limit for menus and an unfocused window.
+  The debug menu keeps its own list of values chosen for testing.
 
 ## Backlog
 

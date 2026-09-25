@@ -15,6 +15,14 @@ namespace Abomination::Platform
         return std::filesystem::path(reinterpret_cast<const char8_t*>(basePath));
     }
 
+    void SleepPrecisely(std::chrono::nanoseconds duration)
+    {
+        if (duration <= std::chrono::nanoseconds::zero())
+            return;
+
+        SDL_DelayPrecise(static_cast<Uint64>(duration.count()));
+    }
+
     void ShowErrorDialog(const std::string& title, const std::string& message)
     {
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title.c_str(), message.c_str(), nullptr);

@@ -10,7 +10,7 @@ namespace Abomination::Core
 
     TEST(FrameTimer, DeltaTimeIsZeroBeforeFirstFrame)
     {
-        const FrameTimer timer(FrameTimer::Clock::time_point{});
+        const FrameTimer timer(TimePoint{});
 
         EXPECT_FLOAT_EQ(timer.GetDeltaTime(), 0.0f);
         EXPECT_DOUBLE_EQ(timer.GetTotalTime(), 0.0);
@@ -18,7 +18,7 @@ namespace Abomination::Core
 
     TEST(FrameTimer, DeltaTimeIsTimeSincePreviousFrame)
     {
-        const FrameTimer::Clock::time_point start{};
+        const TimePoint start{};
         FrameTimer timer(start);
 
         timer.StartFrame(start + 16ms);
@@ -29,7 +29,7 @@ namespace Abomination::Core
 
     TEST(FrameTimer, TotalTimeIsSumOfFrames)
     {
-        const FrameTimer::Clock::time_point start{};
+        const TimePoint start{};
         FrameTimer timer(start);
 
         timer.StartFrame(start + 100ms);
@@ -41,7 +41,7 @@ namespace Abomination::Core
 
     TEST(FrameTimer, LongFrameIsClampedToMaxDeltaTime)
     {
-        const FrameTimer::Clock::time_point start{};
+        const TimePoint start{};
         FrameTimer timer(start);
 
         timer.StartFrame(start + 5s);

@@ -4,10 +4,12 @@
 #include "Core/FrameStatistics.h"
 #include "Core/FrameTimer.h"
 #include "Core/Log.h"
+#include "Platform/SystemServices.h"
 #include "Renderer/DebugOutput.h"
 #include "Renderer/OpenGLLoader.h"
 #include "Renderer/RenderCommands.h"
 
+#include <glm/common.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 
@@ -65,52 +67,107 @@ namespace Abomination
         , m_debugOverlay(std::move(debugOverlay))
     {
         m_camera.SetPosition(InitialCameraPosition);
+        m_previousCameraPosition = InitialCameraPosition;
     }
 
     int Application::Run()
     {
         Core::Log::Write(LogCategory::Core, LogLevel::Info, "Main loop started");
 
-        Core::FrameTimer frameTimer(Core::FrameTimer::Clock::now());
+        Core::FrameTimer frameTimer(Core::Clock::now());
         Core::FrameStatistics frameStatistics;
 
         // One iteration is one frame.
         while (!m_window.IsCloseRequested())
         {
-            frameTimer.StartFrame(Core::FrameTimer::Clock::now());
-            frameStatistics.AddFrame(frameTimer.GetDeltaTime());
+            const Core::TimePoint frameStartTime = Core::Clock::now();
+            frameTimer.StartFrame(frameStartTime);
 
-            // First the devices get this frame's input, then the actions are calculated from them.
+            // 1. Input: first the devices get this frame's input, then the actions are calculated from them.
             m_window.ProcessEvents(m_inputDevices);
             m_actionStates.Update(m_inputDevices, m_inputBindings);
 
-            // An action of the application itself (not of the game), so it is handled here.
-            if (m_actionStates.WasActionStarted(Input::Action::ToggleDebugOverlay))
-                m_debugOverlay.ToggleVisibility();
+            // 2. Everything that happens once per frame.
+            Update();
 
-            // While LookAroundMode is active (the right mouse button by default), the mouse is captured for looking around,
-            // like in the Unity and Unreal editors. The mode is switched only when the action starts or stops.
-            // Capturing is done here because the window belongs to the application; the controller only turns the camera.
-            if (m_actionStates.WasActionStarted(Input::Action::LookAroundMode))
-                m_window.SetRelativeMouseMode(true);
-            if (m_actionStates.WasActionStopped(Input::Action::LookAroundMode))
-                m_window.SetRelativeMouseMode(false);
+            // 3. The simulation in fixed ticks: 0, 1 or several per frame, depending on how long the frame was.
+            //    The ticks of this frame read the input of this frame. A frame without ticks does not lose held keys
+            //    (they are still held in the next frame), but a short press that starts and stops between two ticks
+            //    would be lost; it does not matter for flying, and will be handled for jumping (0.2, player movement).
+            const int tickCount = m_fixedTimestep.Advance(frameTimer.GetDeltaTime());
+            for (int tick = 0; tick < tickCount; ++tick)
+                FixedUpdate(m_fixedTimestep.GetTickDuration());
 
-            m_cameraController.Update(m_camera, m_actionStates, m_inputDevices.mouse, frameTimer.GetDeltaTime());
+            frameStatistics.AddFrame(frameTimer.GetDeltaTime(), tickCount);
 
-            Renderer::SetViewport(m_window.GetWidthInPixels(), m_window.GetHeightInPixels());
-            Renderer::ClearFrame(BackgroundColor);
-            m_demoScene.Draw(frameTimer.GetTotalTime(), m_camera, m_window.GetWidthInPixels(), m_window.GetHeightInPixels());
+            // 4. Drawing and showing the frame.
+            Render(frameTimer.GetTotalTime(), frameStatistics);
 
-            // The overlay is drawn last, on top of the game.
-            m_debugOverlay.Draw(frameStatistics);
-
-            m_window.SwapBuffers();
+            // 5. With an FPS limit, the frame waits here until it has lasted 1 / limit seconds. The next frame then
+            //    starts right on time, and its measured delta time includes this wait.
+            Platform::SleepPrecisely(m_frameLimiter.GetWaitTime(frameStartTime, Core::Clock::now()));
         }
 
         Core::Log::Write(LogCategory::Core, LogLevel::Info, "Main loop finished after {:.1f} seconds",
                          frameTimer.GetTotalTime());
 
         return 0;
+    }
+
+    void Application::Update()
+    {
+        // An action of the application itself (not of the game), so it is handled here.
+        if (m_actionStates.WasActionStarted(Input::Action::ToggleDebugOverlay))
+            m_debugOverlay.ToggleVisibility();
+
+        // While LookAroundMode is active (the right mouse button by default), the mouse is captured for looking around,
+        // like in the Unity and Unreal editors. The mode is switched only when the action starts or stops.
+        // Capturing is done here because the window belongs to the application; the controller only turns the camera.
+        if (m_actionStates.WasActionStarted(Input::Action::LookAroundMode))
+            m_window.SetRelativeMouseMode(true);
+        if (m_actionStates.WasActionStopped(Input::Action::LookAroundMode))
+            m_window.SetRelativeMouseMode(false);
+
+        // Turning follows the mouse every frame, not in ticks: it uses the mouse movement of this frame, which does not
+        // depend on time. In ticks, the movement of a frame without ticks would be lost and applied twice in a frame
+        // with two ticks.
+        m_cameraController.UpdateRotation(m_camera, m_actionStates, m_inputDevices.mouse);
+    }
+
+    void Application::FixedUpdate(float tickDuration)
+    {
+        // Remembered before the camera moves, so a frame can be drawn anywhere between this position and the new one.
+        m_previousCameraPosition = m_camera.GetPosition();
+        m_cameraController.UpdateMovement(m_camera, m_actionStates, tickDuration);
+    }
+
+    void Application::Render(double totalTime, const Core::FrameStatistics& frameStatistics)
+    {
+        Renderer::SetViewport(m_window.GetWidthInPixels(), m_window.GetHeightInPixels());
+        Renderer::ClearFrame(BackgroundColor);
+        m_demoScene.Draw(totalTime, GetInterpolatedCamera(), m_window.GetWidthInPixels(), m_window.GetHeightInPixels());
+
+        // The overlay is drawn last, on top of the game.
+        m_debugOverlay.Draw({
+            .frameStatistics = frameStatistics,
+            .fixedTimestep = m_fixedTimestep,
+            .window = m_window,
+            .frameLimiter = m_frameLimiter,
+        });
+
+        m_window.SwapBuffers();
+    }
+
+    Renderer::Camera Application::GetInterpolatedCamera() const
+    {
+        // glm::mix(a, b, t) = a + (b - a) * t: the point at fraction t of the way from a to b (like std::lerp,
+        // but for vectors). t is the part of the next tick that has already passed, so the drawn position follows
+        // the real time (at most one tick behind the simulation). Only the position is interpolated: the rotation is
+        // already up to date, because turning happens every frame.
+        Renderer::Camera camera = m_camera;
+        const float interpolationFactor = m_fixedTimestep.GetInterpolationFactor();
+        camera.SetPosition(glm::mix(m_previousCameraPosition, m_camera.GetPosition(), interpolationFactor));
+
+        return camera;
     }
 }

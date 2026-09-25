@@ -27,23 +27,28 @@ namespace Abomination::Gameplay
         : m_settings(settings)
     {}
 
-    void FreeFlyCameraController::Update(Renderer::Camera& camera, const Input::ActionStates& actions,
-                                         const Input::Mouse& mouse, float deltaTime) const noexcept
+    void FreeFlyCameraController::UpdateRotation(Renderer::Camera& camera, const Input::ActionStates& actions,
+                                                 const Input::Mouse& mouse) const noexcept
     {
-        // 1. Turning. Only while LookAroundMode is active, and not in the frame it starts: switching the mouse into
-        //    relative mode can produce one big jump of movement in that frame, which would snap the camera.
-        //    The mouse movement is already "per frame", so it is not multiplied by deltaTime.
-        //    Moving the mouse to the right (+X) must turn right, which is a negative yaw in our camera;
-        //    moving it up (-Y, screen coordinates grow downwards) must look up, which is a positive pitch.
+        // Only while LookAroundMode is active, and not in the frame it starts: switching the mouse into relative mode
+        // can produce one big jump of movement in that frame, which would snap the camera.
+        // The mouse movement is the distance moved during this frame, so it is not multiplied by any delta time:
+        // the same hand movement turns the camera by the same angle at any frame rate.
+        // Moving the mouse to the right (+X) must turn right, which is a negative yaw in our camera;
+        // moving it up (-Y, screen coordinates grow downwards) must look up, which is a positive pitch.
         const bool isLookingAround =
             actions.IsActionActive(Action::LookAroundMode) && !actions.WasActionStarted(Action::LookAroundMode);
-        if (isLookingAround)
-        {
-            const glm::vec2 mouseMovement = mouse.GetMovement();
-            camera.Rotate(-mouseMovement.x * m_settings.mouseSensitivity, -mouseMovement.y * m_settings.mouseSensitivity);
-        }
+        if (!isLookingAround)
+            return;
 
-        // 2. Direction of movement. Every pair of opposite actions gives -1, 0 or +1 along its axis:
+        const glm::vec2 mouseMovement = mouse.GetMovement();
+        camera.Rotate(-mouseMovement.x * m_settings.mouseSensitivity, -mouseMovement.y * m_settings.mouseSensitivity);
+    }
+
+    void FreeFlyCameraController::UpdateMovement(Renderer::Camera& camera, const Input::ActionStates& actions,
+                                                 float deltaTime) const noexcept
+    {
+        // 1. Direction of movement. Every pair of opposite actions gives -1, 0 or +1 along its axis:
         //    W and S together cancel out, so the camera stays in place.
         const float forwardAmount =
             GetActionValue(actions, Action::MoveForward) - GetActionValue(actions, Action::MoveBackward);
@@ -59,8 +64,7 @@ namespace Abomination::Gameplay
         // 41% faster than straight flying. Normalizing makes the length 1 in every direction.
         direction = glm::normalize(direction);
 
-        // 3. Distance for this frame: speed (meters per second) times the frame duration (seconds) gives meters.
-        //    This keeps the speed the same at 30 and at 300 frames per second.
+        // 2. Distance for this tick: speed (meters per second) times the tick duration (seconds) gives meters.
         float speed = m_settings.moveSpeed;
         if (actions.IsActionActive(Action::MoveFaster))
             speed *= m_settings.fastMoveMultiplier;

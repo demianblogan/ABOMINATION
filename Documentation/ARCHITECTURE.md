@@ -107,7 +107,7 @@ A module may depend only on modules **below** it in this diagram.
 
 | Module        | Responsibility                                                  | Status  |
 |---------------|-----------------------------------------------------------------|---------|
-| `Core`        | Time, frame statistics, logging, files, image decoding          | 0.1     |
+| `Core`        | Time (clock, frame timer, fixed timestep, FPS limit), frame statistics, logging, files, image decoding | 0.1 |
 | `Input`       | Keyboard and mouse state, actions and bindings (see section 7)  | 0.1     |
 | `Platform`    | SDL3 window, OpenGL context creation, OS events → `Input`       | 0.1     |
 | `Renderer`    | Everything OpenGL. Exposes a high-level API (see section 6)     | 0.1     |
@@ -117,7 +117,7 @@ A module may depend only on modules **below** it in this diagram.
 | `AI`          | Enemy behaviour, pathfinding                                    | Planned |
 | `Audio`       | Sounds and music (miniaudio)                                    | Planned |
 | `Gameplay`    | Game rules: camera controllers (0.1); player, weapons, enemies  | 0.1     |
-| `UI`          | Dear ImGui debug overlay (0.1); HUD and menus (later)           | 0.1     |
+| `UI`          | Dear ImGui debug overlay with a menu bar (0.1–0.2); HUD and menus (later) | 0.1 |
 | `Save`        | Serialization of the game state                                 | Planned |
 | `Application` | Startup, shutdown, main loop, switching between game states     | 0.1     |
 
@@ -142,6 +142,12 @@ A module may depend only on modules **below** it in this diagram.
   size, time), `Renderer::ImGuiRendererBackend` wraps the OpenGL backend
   (drawing), and `UI::DebugOverlay` combines them and describes the windows.
   ImGui is used only for developer tools, never for the game interface.
+- **The debug overlay** has a main menu bar (F1): *View* opens and closes
+  debug windows (now *Performance*), *Settings* changes settings grouped like
+  the future options menu (now *Display*: V-Sync, FPS limit). `Draw()` takes
+  one `UI::DebugOverlayContext` with references to the systems the overlay
+  shows and changes; a new debug tool adds a field to it instead of a new
+  parameter. The references are valid only during the call.
 
 **Startup order** (`Main.cpp` → `Application::Create`)
 
@@ -164,46 +170,64 @@ A fatal startup error is logged and shown in an error dialog.
 Shutdown happens in reverse order through destructors; the application is
 destroyed before logging stops, so the shutdown is recorded.
 
-## 5. Main loop — Planned (0.2)
+## 5. Main loop
 
-**Now (0.1):** one iteration is one frame:
-
-1. `FrameTimer` measures the frame time (monotonic clock, frames longer than
-   0.25 s are clamped); `FrameStatistics` remembers the last 120 frame times.
-2. `Window::ProcessEvents` handles the OS events and fills `Input::InputDevices`
-   (keyboard and mouse).
-3. `Input::ActionStates` calculates the actions from the devices and the
-   bindings; application actions are handled (F1 toggles the overlay, the
-   right mouse button captures the mouse).
-4. `Gameplay::FreeFlyCameraController` moves and turns the camera.
-5. The viewport is set to the window size and the frame is drawn through the
-   camera.
-6. The debug overlay is drawn on top of the frame.
-7. The buffers are swapped (waiting for the monitor when V-Sync is on).
-
-**Planned:**
-
-Gameplay and physics run at a **fixed timestep**; rendering runs as fast as
-allowed (or at the V-Sync / FPS limit) and **interpolates** between the last
-two simulation states.
+`Application::Run` repeats one iteration per frame. The simulation runs in
+**fixed ticks** of 1/60 s, drawing runs as fast as allowed (or at the V-Sync /
+FPS limit) and **interpolates** between the last two simulation states.
 
 ```
-accumulator += frameTime
-while accumulator >= FixedDeltaTime:      // e.g. 1/60 s
-    ProcessInput()
-    Simulate(FixedDeltaTime)              // physics, AI, gameplay
-    accumulator -= FixedDeltaTime
-alpha = accumulator / FixedDeltaTime
-Render(alpha)                             // interpolate between states
+while the window is open:
+    frameTimer.StartFrame()                  // measure the frame time
+    ProcessEvents, ActionStates.Update       // 1. input
+    Update()                                 // 2. once per frame
+    tickCount = fixedTimestep.Advance(frameTime)
+    repeat tickCount times:
+        FixedUpdate(tickDuration)            // 3. once per tick, always 1/60 s
+    Render()                                 // 4. draw with interpolation, swap buffers
+    SleepPrecisely(frameLimiter wait time)   // 5. FPS limit (debug overlay)
 ```
 
-Why: movement and physics behave identically at 30 and 300 FPS, jump height
-does not depend on frame rate, and simulation is deterministic enough for
-tests. In 0.1 the fly camera uses a simple variable timestep.
+1. **Input.** `FrameTimer` measures the frame time (monotonic clock, frames
+   longer than 0.25 s are clamped). `Window::ProcessEvents` fills
+   `Input::InputDevices`, `Input::ActionStates` calculates the actions.
+2. **`Update()`, once per frame:** what must react immediately and does not
+   depend on time — the F1 overlay toggle, capturing the mouse, turning the
+   camera with the mouse.
+3. **`FixedUpdate(tickDuration)`, once per tick:** everything that moves the
+   world forward in time (now the camera movement; later physics, AI,
+   gameplay). `Core::FixedTimestep` adds the frame time to an accumulator and
+   takes whole ticks out of it, so a frame runs 0, 1 or several ticks and the
+   simulation always makes 60 ticks per second. At most 8 ticks run per
+   frame: if the computer cannot keep up, the extra time is dropped and the
+   game slows down instead of freezing (the "spiral of death").
+4. **`Render()`:** the frame is drawn through the camera with its position
+   interpolated between the states before and after the last tick
+   (`alpha` = time left in the accumulator / tick duration), then the debug
+   overlay, then the buffers are swapped.
+5. **FPS limit:** `Core::FrameLimiter` calculates how long the frame still has
+   to last, `Platform::SleepPrecisely` waits (sleep plus a short busy-wait).
 
-Camera rotation from the mouse is applied **every rendered frame**, not in the
-fixed step, so looking around never lags behind the display. Movement of the
-player's body happens in the fixed step using the current view direction.
+**Why a fixed timestep:** with a variable time step the result depends on the
+frame rate — the jump height changes because every step treats the speed as
+constant during the step, a long frame can move an object through a thin wall
+between two checks, and the same input does not give the same result, so bugs
+cannot be reproduced and movement cannot be tested. With fixed ticks all of
+this behaves the same at 15 and at 1000 FPS.
+
+**What runs where:**
+
+- **Turning with the mouse runs every frame**, not in ticks: it uses the mouse
+  movement of the frame, which does not depend on time. In ticks, the
+  movement of a frame without ticks would be lost and applied twice in a
+  frame with two ticks, and the view would lag behind the mouse.
+- **Only the position is interpolated;** the rotation is always up to date.
+  The drawn image is at most one tick (16.7 ms) behind the simulation.
+- **Input in ticks:** the ticks of a frame read the input of that frame. Held
+  keys are never lost, but a press that starts and stops between two ticks
+  would be; this is handled when jumping is added (0.2, player movement).
+- The previous camera position is kept by `Application` for now; with ECS
+  (0.2) interpolation becomes a system working on every moving entity.
 
 ## 6. Renderer
 
@@ -326,9 +350,11 @@ operation, so `Application` switches it when `LookAroundMode` starts/stops.
   the view, Q/E along the world vertical, Shift faster, mouse look while the
   right button is held). Planned: the player's camera controller (eye height,
   view bob, recoil), later a death camera.
-- Controllers get everything they work with as parameters
-  (`Update(camera, actions, mouse, deltaTime)`) instead of storing
-  references, which would dangle after their owner is moved.
+- Controllers get everything they work with as parameters instead of storing
+  references, which would dangle after their owner is moved. Turning and
+  moving are separate calls because they run at different rates (see
+  section 5): `UpdateRotation(camera, actions, mouse)` every frame,
+  `UpdateMovement(camera, actions, deltaTime)` every tick.
 
 **Planned (0.2):** with ECS the camera becomes a component of an entity
 (position and rotation in its `Transform`), the free-fly controller turns

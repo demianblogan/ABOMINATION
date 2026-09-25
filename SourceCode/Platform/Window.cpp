@@ -79,18 +79,18 @@ namespace Abomination::Platform
             return std::unexpected(std::format("Failed to create an OpenGL 4.6 Core context: {}", SDL_GetError()));
         }
 
-        // Swap interval 1: SwapBuffers() waits for one monitor refresh. 0: it returns immediately.
-        SDL_GL_SetSwapInterval(settings.isVSyncEnabled ? 1 : 0);
-
         // The size in pixels can differ from the requested size, for example when Windows scales the desktop.
         int widthInPixels = 0;
         int heightInPixels = 0;
         SDL_GetWindowSizeInPixels(window, &widthInPixels, &heightInPixels);
 
-        Core::Log::Write(LogCategory::Platform, LogLevel::Info, "Window created: {}x{} pixels, V-Sync {}", widthInPixels,
-                         heightInPixels, settings.isVSyncEnabled ? "on" : "off");
+        Core::Log::Write(LogCategory::Platform, LogLevel::Info, "Window created: {}x{} pixels", widthInPixels,
+                         heightInPixels);
 
-        return Window(window, context, widthInPixels, heightInPixels);
+        Window result(window, context, widthInPixels, heightInPixels);
+        result.SetVSyncEnabled(settings.isVSyncEnabled);
+
+        return result;
     }
 
     Window::Window(SDL_Window* window, SDL_GLContextState* context, int widthInPixels, int heightInPixels) noexcept
@@ -104,6 +104,7 @@ namespace Abomination::Platform
         : m_window(std::exchange(other.m_window, nullptr))
         , m_context(std::exchange(other.m_context, nullptr))
         , m_isCloseRequested(other.m_isCloseRequested)
+        , m_isVSyncEnabled(other.m_isVSyncEnabled)
         , m_widthInPixels(other.m_widthInPixels)
         , m_heightInPixels(other.m_heightInPixels)
     {}
@@ -116,6 +117,7 @@ namespace Abomination::Platform
             m_window = std::exchange(other.m_window, nullptr);
             m_context = std::exchange(other.m_context, nullptr);
             m_isCloseRequested = other.m_isCloseRequested;
+            m_isVSyncEnabled = other.m_isVSyncEnabled;
             m_widthInPixels = other.m_widthInPixels;
             m_heightInPixels = other.m_heightInPixels;
         }
@@ -216,6 +218,27 @@ namespace Abomination::Platform
     void Window::SetRelativeMouseMode(bool isEnabled)
     {
         SDL_SetWindowRelativeMouseMode(m_window, isEnabled);
+    }
+
+    void Window::SetVSyncEnabled(bool isEnabled)
+    {
+        // The swap interval is how many monitor refreshes SwapBuffers() waits for: 1 - one refresh, 0 - no waiting.
+        // It is a setting of the current OpenGL context (this window's), so it can be changed at any time.
+        if (!SDL_GL_SetSwapInterval(isEnabled ? 1 : 0))
+        {
+            Core::Log::Write(LogCategory::Platform, LogLevel::Warning, "Failed to turn V-Sync {}: {}",
+                             isEnabled ? "on" : "off", SDL_GetError());
+
+            return;
+        }
+
+        m_isVSyncEnabled = isEnabled;
+        Core::Log::Write(LogCategory::Platform, LogLevel::Info, "V-Sync {}", isEnabled ? "on" : "off");
+    }
+
+    bool Window::IsVSyncEnabled() const noexcept
+    {
+        return m_isVSyncEnabled;
     }
 
     bool Window::IsCloseRequested() const noexcept

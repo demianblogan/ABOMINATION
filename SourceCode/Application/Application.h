@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Input/ActionStates.h"
+#include "Input/InputBindings.h"
 #include "Input/InputDevices.h"
 #include "Platform/SDLLibrary.h"
 #include "Platform/Window.h"
@@ -37,5 +39,9 @@ namespace Abomination
 
         // State of the keyboard and the mouse for the current frame: the window fills it, the game reads it.
         Input::InputDevices m_inputDevices;
+
+        // Which keys and buttons trigger which actions, and the state of every action for the current frame.
+        Input::InputBindings m_inputBindings = Input::InputBindings::CreateDefault();
+        Input::ActionStates m_actionStates;
     };
 }

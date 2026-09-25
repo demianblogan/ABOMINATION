@@ -1,0 +1,66 @@
+#include "Input/ActionStates.h"
+
+#include "Input/InputBindings.h"
+#include "Input/InputDevices.h"
+
+#include <cstddef>
+#include <utility>
+#include <variant>
+
+namespace Abomination::Input
+{
+    namespace
+    {
+        // True if the input is held now, or was pressed during this frame. The second part matters for a very quick
+        // tap: a key pressed and released between two frames is no longer held, but the press still has to count.
+        bool IsBindingActive(const InputBinding& binding, const InputDevices& devices) noexcept
+        {
+            if (const Key* key = std::get_if<Key>(&binding); key != nullptr)
+                return devices.keyboard.IsKeyHeld(*key) || devices.keyboard.WasKeyPressed(*key);
+
+            const MouseButton button = std::get<MouseButton>(binding);
+            return devices.mouse.IsButtonHeld(button) || devices.mouse.WasButtonPressed(button);
+        }
+
+        bool IsAnyBindingActive(Action action, const InputDevices& devices, const InputBindings& bindings) noexcept
+        {
+            for (const InputBinding& binding : bindings.GetBindings(action))
+                if (IsBindingActive(binding, devices))
+                    return true;
+
+            return false;
+        }
+    }
+
+    void ActionStates::Update(const InputDevices& devices, const InputBindings& bindings) noexcept
+    {
+        for (std::size_t index = 0; index < ActionCount; ++index)
+        {
+            const auto action = static_cast<Action>(index);
+            const bool wasActive = m_activeActions[index];
+            const bool isActive = IsAnyBindingActive(action, devices, bindings);
+
+            // Started and stopped are found by comparing with the previous frame, not by looking at "pressed" flags of
+            // the inputs: with two bindings (W and Up) pressing the second one while the first is held must not start
+            // the action again.
+            m_activeActions[index] = isActive;
+            m_startedActions[index] = isActive && !wasActive;
+            m_stoppedActions[index] = !isActive && wasActive;
+        }
+    }
+
+    bool ActionStates::IsActionActive(Action action) const noexcept
+    {
+        return m_activeActions[std::to_underlying(action)];
+    }
+
+    bool ActionStates::WasActionStarted(Action action) const noexcept
+    {
+        return m_startedActions[std::to_underlying(action)];
+    }
+
+    bool ActionStates::WasActionStopped(Action action) const noexcept
+    {
+        return m_stoppedActions[std::to_underlying(action)];
+    }
+}

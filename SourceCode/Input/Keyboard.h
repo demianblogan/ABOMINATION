@@ -14,7 +14,19 @@ namespace Abomination::Input
     // scancode converts to Key with a simple cast. New keys are added here when the game starts using them.
     enum class Key : std::uint16_t
     {
+        // Letters
+        A = 4,
+        D = 7,
+        E = 8,
+        Q = 20,
+        S = 22,
+        W = 26,
+
+        // Function keys
         F1 = 58,
+
+        // Modifiers
+        LeftShift = 225,
     };
 
     // Number of possible scancodes. Must match SDL_SCANCODE_COUNT; Platform/Window.cpp checks this with a static_assert.

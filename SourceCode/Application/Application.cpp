@@ -74,18 +74,20 @@ namespace Abomination
             frameTimer.StartFrame(Core::FrameTimer::Clock::now());
             frameStatistics.AddFrame(frameTimer.GetDeltaTime());
 
+            // First the devices get this frame's input, then the actions are calculated from them.
             m_window.ProcessEvents(m_inputDevices);
+            m_actionStates.Update(m_inputDevices, m_inputBindings);
 
-            // A direct key check for now. When the action layer of input appears (the fly camera branch), this becomes
-            // the ToggleDebugOverlay action, and the key is taken from the bindings instead of being written here.
-            if (m_inputDevices.keyboard.WasKeyPressed(Input::Key::F1))
+            // An action of the application itself (not of the game), so it is handled here.
+            if (m_actionStates.WasActionStarted(Input::Action::ToggleDebugOverlay))
                 m_debugOverlay.ToggleVisibility();
 
-            // While the right mouse button is held, the mouse is captured for looking around (used by the fly camera,
-            // like in the Unity and Unreal editors). The mode is switched only when the button changes, not every frame.
-            if (m_inputDevices.mouse.WasButtonPressed(Input::MouseButton::Right))
+            // While LookAroundMode is active (the right mouse button by default), the mouse is captured for looking around,
+            // like in the Unity and Unreal editors. The mode is switched only when the action starts or stops.
+            // This moves to the fly camera controller together with the camera.
+            if (m_actionStates.WasActionStarted(Input::Action::LookAroundMode))
                 m_window.SetRelativeMouseMode(true);
-            if (m_inputDevices.mouse.WasButtonReleased(Input::MouseButton::Right))
+            if (m_actionStates.WasActionStopped(Input::Action::LookAroundMode))
                 m_window.SetRelativeMouseMode(false);
 
             Renderer::SetViewport(m_window.GetWidthInPixels(), m_window.GetHeightInPixels());

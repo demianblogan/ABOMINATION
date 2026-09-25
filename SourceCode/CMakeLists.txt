@@ -31,6 +31,11 @@ set(LIBRARY_SOURCES
     Core/Version.h
     Core/Version.cpp.in
 
+    Input/Action.h
+    Input/ActionStates.h
+    Input/ActionStates.cpp
+    Input/InputBindings.h
+    Input/InputBindings.cpp
     Input/InputDevices.h
     Input/Keyboard.h
     Input/Keyboard.cpp

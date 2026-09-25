@@ -64,9 +64,9 @@ seen (collision, map geometry) get debug visualizations in the overlay.
 | # | Branch                          | Status | Content                                                                 |
 |---|---------------------------------|--------|-------------------------------------------------------------------------|
 | 1 | `feat/fixed-timestep`           | ✅     | Debug menu bar (View, Settings > Display), V-Sync toggle, FPS limit; fixed 60 Hz simulation ticks with interpolation; main loop split into `Update`, `FixedUpdate`, `Render` |
-| 2 | `feat/asset-manager`            | ⏳     | Typed asset handles, cache by path, magenta fallback texture; list of loaded assets in the overlay |
+| 2 | `feat/asset-manager`            | ✅     | Typed asset handles and a generic cache, texture and shader stores with magenta fallbacks, `RenderAssets`; Assets window in the overlay, debug windows remember their positions; crate texture on the cube |
 | 3 | `feat/ecs-scene`                | ⏳     | EnTT: entities with transform and mesh, render system, camera as a component, interpolation as a system; `DemoScene` removed; entity inspector |
-| 4 | `feat/map-geometry`             | ⏳     | TrenchBroom game configuration, `.map` parser, brushes → polygons (plane intersection), Z-up → Y-up; solid and wireframe render modes, map statistics |
+| 4 | `feat/map-geometry`             | ⏳     | TrenchBroom game configuration, `.map` parser, brushes → polygons (plane intersection), Z-up → Y-up; asset lifetime groups (global and level); solid and wireframe render modes, map statistics |
 | 5 | `feat/brush-textures`           | ⏳     | Texture coordinates from the Valve 220 format, drawing grouped by texture |
 | 6 | `feat/collision`                | ⏳     | Axis-aligned box traced against brushes (Quake-style), debug drawing of boxes and traces |
 | 7 | `feat/player-movement`          | ⏳     | Quake movement: acceleration, friction, jumping, gravity, sliding along walls, stepping up stairs; noclip toggle; speedometer |
@@ -83,9 +83,10 @@ far:
 - **0.2** — decide collision approach: own AABB-vs-brush collision with a BVH;
   Jolt Physics only for queries if it becomes necessary. Learn TrenchBroom:
   game configuration, entity definitions, `.map` format, Z-up → Y-up.
-  Asset manager (see ARCHITECTURE.md, section 9): typed handles, a cache by
-  path, global and per-level groups, a fallback texture; `DemoScene` is
-  replaced by the high-level renderer. The camera becomes an ECS component and
+  Asset lifetime groups (global and per-level) come with the first level
+  (branch 4). `DemoScene` is replaced by entities with a mesh component and a
+  render system; its cube geometry becomes the `Mesh` asset, and the renderer
+  may take over `RenderAssets`. The camera becomes an ECS component and
   the renderer receives only a `View` (see ARCHITECTURE.md, section 8); the
   free-fly controller becomes a debug noclip mode next to the player camera.
 - **0.3** — asset pipeline decision: where models come from (generated,

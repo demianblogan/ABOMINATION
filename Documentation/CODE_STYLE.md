@@ -70,10 +70,13 @@ found during review.
   | An action that has been done    | **noun** + **verb in the past tense**                                | `levelLoaded`, `playerJumped`, `buttonPressed` |
 - **Functions and methods start with a verb**: `CreateWindow()`,
   `ApplyDamage()`, `GetLogger()`, `ConvertToString()` — not `LoggerFor()` or
-  `ToString()`. The only exception are functions that check a state and return
-  `bool`: they follow the boolean patterns above (`IsLevelEnabled()`).
+  `ToString()`. Exceptions:
+  - functions that check a state and return `bool` follow the boolean
+    patterns above (`IsLevelEnabled()`);
+  - `FixedUpdate()` — the per-tick update of the main loop, named like in
+    Unity because the term is well known in game engines.
 - Getters use `Get`, setters use `Set`: member `m_width` → `GetWidth()`,
-  `SetWidth(int)`; `SetVSync(bool)`.
+  `SetWidth(int)`; `SetVSyncEnabled(bool)`.
 - Macros are avoided. A naming rule for them will be added if one is ever
   needed.
 - No Hungarian notation (`iCount`, `pData`, `strName`).

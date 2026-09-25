@@ -141,7 +141,7 @@ The current build (milestone 0.1) has a free-fly camera around a test cube.
 | Version | Milestone              | Status |
 |:-------:|------------------------|:------:|
 | 0.1     | Foundation             | ✅     |
-| 0.2     | First Steps            | ⏳     |
+| 0.2     | First Steps            | 🔨     |
 | 0.3     | Boomstick              | ⏳     |
 | 0.4     | It Moves               | ⏳     |
 | 0.5     | Lights                 | ⏳     |

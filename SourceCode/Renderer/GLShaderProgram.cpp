@@ -3,6 +3,7 @@
 #include "Core/FileSystem.h"
 
 #include <glad/gl.h>
+#include <glm/gtc/type_ptr.hpp>
 
 #include <format>
 #include <utility>
@@ -159,5 +160,14 @@ namespace Abomination::Renderer
     void GLShaderProgram::Use() const
     {
         glUseProgram(m_programID);
+    }
+
+    void GLShaderProgram::SetUniform(std::uint32_t location, const glm::mat4& value) const
+    {
+        // Direct State Access: sets the uniform of this program by its ID, the program does not have to be in use.
+        // (The old way: glUseProgram(id) first, then glUniformMatrix4fv.)
+        // 1 - one matrix; GL_FALSE - do not transpose: glm already stores matrices column by column, as OpenGL expects;
+        // glm::value_ptr - a pointer to the 16 floats of the matrix.
+        glProgramUniformMatrix4fv(m_programID, static_cast<GLint>(location), 1, GL_FALSE, glm::value_ptr(value));
     }
 }

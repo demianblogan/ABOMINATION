@@ -99,7 +99,7 @@ namespace Abomination
 
             Renderer::SetViewport(m_window.GetWidthInPixels(), m_window.GetHeightInPixels());
             Renderer::ClearFrame(CalculateBackgroundColor(frameTimer.GetTotalTime()));
-            m_demoScene.Draw();
+            m_demoScene.Draw(frameTimer.GetTotalTime(), m_window.GetWidthInPixels(), m_window.GetHeightInPixels());
 
             // The overlay is drawn last, on top of the game.
             m_debugOverlay.Draw(frameStatistics);

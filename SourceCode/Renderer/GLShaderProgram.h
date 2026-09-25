@@ -1,5 +1,7 @@
 #pragma once
 
+#include <glm/mat4x4.hpp>
+
 #include <cstdint>
 #include <expected>
 #include <filesystem>
@@ -33,6 +35,10 @@ namespace Abomination::Renderer
 
         // Makes this program the one that processes the next draw calls.
         void Use() const;
+
+        // Sets a mat4 uniform of this program: a value that is the same for all vertices of a draw call.
+        // location must match layout(location = N) of the uniform in the shader.
+        void SetUniform(std::uint32_t location, const glm::mat4& value) const;
 
     private:
         explicit GLShaderProgram(std::uint32_t programID) noexcept;

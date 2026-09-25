@@ -100,7 +100,7 @@ A module may depend only on modules **below** it in this diagram.
 
 | Module        | Responsibility                                                  | Status  |
 |---------------|-----------------------------------------------------------------|---------|
-| `Core`        | Time, frame statistics, logging, assertions, math, file reading | 0.1     |
+| `Core`        | Time, frame statistics, logging, files, image decoding          | 0.1     |
 | `Input`       | State of input devices, later actions and bindings (see 7)      | 0.1     |
 | `Platform`    | SDL3 window, OpenGL context creation, OS events → `Input`       | 0.1     |
 | `Renderer`    | Everything OpenGL. Exposes a high-level API (see section 6)     | 0.1     |
@@ -146,7 +146,8 @@ A module may depend only on modules **below** it in this diagram.
    checks that 4.6 is available.
 5. In Debug builds `Renderer::EnableDebugOutput` routes driver messages to the
    log.
-6. `UI::DebugOverlay` creates the ImGui context and both backends.
+6. `Renderer::DemoScene` loads its shaders and texture from `Assets/`.
+7. `UI::DebugOverlay` creates the ImGui context and both backends.
 
 Objects that own resources are created by a static `Create()` /
 `Initialize()` returning `std::expected<Object, std::string>`, because a
@@ -214,8 +215,30 @@ Inside the renderer:
   logger. It is synchronous, so a breakpoint in the callback shows the
   offending call in the call stack.
 
-**Now (0.1):** `LoadOpenGLFunctions`, `EnableDebugOutput`, and the frame
-commands `SetViewport` / `ClearFrame`.
+**Now (0.1):**
+
+- `LoadOpenGLFunctions`, `EnableDebugOutput`, the frame commands
+  `SetViewport` / `ClearFrame` (color and depth).
+- RAII wrappers, all move-only and built on DSA, IDs stored as
+  `std::uint32_t` so headers do not need GLAD:
+  - `GLShaderProgram` — compiles and links a vertex and a fragment shader
+    (from source or files), returns the compiler log on failure, labels the
+    program for debuggers (`glObjectLabel`), sets `mat4` uniforms;
+  - `GLBuffer` — immutable storage (`glNamedBufferStorage`);
+  - `GLVertexArray` — vertex buffer bindings, float attributes, index buffer
+    (separate attribute format: attributes are connected to buffers through
+    binding slots);
+  - `GLTexture` — immutable storage with all mipmap levels, pixel-crisp
+    filtering (`GL_NEAREST` / `GL_NEAREST_MIPMAP_LINEAR`), repeat wrapping,
+    bound to texture units.
+- Explicit `layout(location)` / `layout(binding)` everywhere: C++ constants
+  and shaders agree on the numbers in advance, nothing is queried at run time.
+- `DemoScene` — a **temporary** rotating textured cube (model, view and
+  perspective projection matrices, depth test, back-face culling) used to
+  learn the basics; replaced by the high-level renderer in 0.2.
+
+Color textures are uploaded as `GL_RGBA8` without gamma correction for now;
+sRGB textures and an sRGB framebuffer come with lighting in 0.5.
 
 The executable exports `NvOptimusEnablement` and
 `AmdPowerXpressRequestHighPerformance`, so laptops with hybrid graphics run
@@ -266,7 +289,39 @@ store input.
 | Gamepad (Xbox, DualSense)               | 0.7                        |
 | Bindings from settings, rebinding screen| 0.8                        |
 
-## 8. ECS — Planned (0.2)
+## 8. Assets
+
+**Now (0.1):**
+
+- The `Assets/` folder of the repository is copied next to the executable on
+  every build (CMake target `CopyAssets`, only changed files are copied).
+  The game finds it as `Platform::GetExecutableDirectory() / "Assets"`;
+  the path is computed once in `Main.cpp` and passed down.
+- Loading is split into steps, each a separate function:
+  reading a file (`Core::ReadTextFile`, `Core::ReadBinaryFile`) →
+  decoding (`Core::LoadImageFile`, stb_image; rows flipped so the bottom row
+  comes first, as OpenGL expects) → uploading to the GPU (`GLTexture`,
+  `GLShaderProgram`).
+- A missing font falls back to the built-in one with a warning; other assets
+  are loaded by `DemoScene` directly.
+- Every third-party asset is listed in `ASSETS.md` before it is committed.
+
+**Planned (0.2)** — when the first level brings dozens of textures:
+
+- An asset manager with typed handles (`AssetHandle<T>`: index + generation)
+  instead of pointers, so components can be saved and a stale handle is
+  detected.
+- One generic storage template plus a loader per asset type (texture,
+  shader, later mesh and material).
+- A cache by path: an asset requested twice is loaded once.
+- Lifetime by groups: **global** (fonts, weapons) and **level** (everything
+  the current level loaded, released when the next level starts).
+- A visible fallback for missing textures (magenta checker) instead of an
+  error.
+- Later: shader hot reload (0.5), packed archives with a virtual file system
+  (near 1.0).
+
+## 9. ECS — Planned (0.2)
 
 Library: **EnTT**.
 
@@ -281,14 +336,14 @@ Library: **EnTT**.
 - Static level geometry is **not** stored as entities; it is owned by the
   `World` module in structures optimized for rendering and collision.
 
-## 9. Data-driven design — Planned
+## 10. Data-driven design — Planned
 
 - Balance values (weapon damage, enemy health, speeds) are read from
   `Assets/Configurations/*.json`.
 - User settings are stored separately in the user's folder
   (`%APPDATA%/AloneBull/Abomination/`), never in `Assets/`.
 
-## 10. Save system — Planned (0.8)
+## 11. Save system — Planned (0.8)
 
 Every gameplay component must be serializable. Rules to follow from 0.2:
 
@@ -296,7 +351,7 @@ Every gameplay component must be serializable. Rules to follow from 0.2:
   stored as entity IDs, references to resources as asset IDs/paths.
 - No hidden state in systems that would be lost on save/load.
 
-## 11. Threading
+## 12. Threading
 
 Single-threaded for now. Candidates for background threads later: asset
 loading, audio (miniaudio already runs its own thread), lightmap baking.

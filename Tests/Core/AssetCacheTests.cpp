@@ -5,6 +5,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace Abomination::Core
 {
@@ -98,16 +99,16 @@ namespace Abomination::Core
     {
         m_cache.Add("Textures/Crate.png", "crate");
         const AssetHandle<std::string> wallHandle = m_cache.Add("Textures/Wall.png", "wall");
-        m_cache.Add("Textures/Door.png", "door");
+        m_cache.Add("Textures/Door.png", "door", AssetLifetime::Level);
         m_cache.Remove(wallHandle);
 
         std::string visited;
-        m_cache.VisitAssets([&](const std::string& path, const std::string& asset)
+        m_cache.VisitAssets([&](const std::string& path, const std::string& asset, AssetLifetime lifetime)
         {
-            visited += path + "=" + asset + ";";
+            visited += path + "=" + asset + (lifetime == AssetLifetime::Level ? " (level)" : "") + ";";
         });
 
-        EXPECT_EQ(visited, "Textures/Crate.png=crate;Textures/Door.png=door;");
+        EXPECT_EQ(visited, "Textures/Crate.png=crate;Textures/Door.png=door (level);");
     }
 
     TEST_F(AssetCacheTest, GetPathGivesPathOfValidHandleOnly)
@@ -130,5 +131,59 @@ namespace Abomination::Core
 
         ASSERT_NE(cache.Get(handle), nullptr);
         EXPECT_EQ(**cache.Get(handle), 42);
+    }
+
+    TEST_F(AssetCacheTest, AssetsAreGlobalByDefault)
+    {
+        const AssetHandle<std::string> handle = m_cache.Add("Shaders/Wireframe", "wireframe");
+
+        EXPECT_EQ(m_cache.GetLifetime(handle), AssetLifetime::Global);
+    }
+
+    TEST_F(AssetCacheTest, RemoveAllRemovesOnlyThatLifetime)
+    {
+        const AssetHandle<std::string> global = m_cache.Add("Shaders/Wireframe", "wireframe");
+        const AssetHandle<std::string> wall = m_cache.Add("Textures/Wall.png", "wall", AssetLifetime::Level);
+        const AssetHandle<std::string> floor = m_cache.Add("Textures/Floor.png", "floor", AssetLifetime::Level);
+
+        const std::vector<std::string> removedPaths = m_cache.RemoveAll(AssetLifetime::Level);
+
+        EXPECT_EQ(removedPaths, (std::vector<std::string>{"Textures/Wall.png", "Textures/Floor.png"}));
+        EXPECT_FALSE(m_cache.IsValid(wall));
+        EXPECT_FALSE(m_cache.IsValid(floor));
+        EXPECT_FALSE(m_cache.Find("Textures/Wall.png").has_value());
+        EXPECT_TRUE(m_cache.IsValid(global));
+        EXPECT_EQ(m_cache.GetCount(), 1u);
+    }
+
+    TEST_F(AssetCacheTest, SlotsOfRemovedLevelAreReusedWithNewGeneration)
+    {
+        // The next level loads its assets into the slots the previous one left; handles of the old level stay invalid.
+        const AssetHandle<std::string> oldWall = m_cache.Add("Textures/Wall.png", "wall", AssetLifetime::Level);
+        m_cache.RemoveAll(AssetLifetime::Level);
+
+        const AssetHandle<std::string> newWall = m_cache.Add("Textures/Wall.png", "new wall", AssetLifetime::Level);
+
+        EXPECT_EQ(newWall.index, oldWall.index);
+        EXPECT_NE(newWall.generation, oldWall.generation);
+        EXPECT_FALSE(m_cache.IsValid(oldWall));
+        ASSERT_NE(m_cache.Get(newWall), nullptr);
+        EXPECT_EQ(*m_cache.Get(newWall), "new wall");
+    }
+
+    TEST_F(AssetCacheTest, LongerLifetimeWins)
+    {
+        // A level texture the whole game asks for too must survive the level.
+        const AssetHandle<std::string> handle = m_cache.Add("Textures/Wall.png", "wall", AssetLifetime::Level);
+        m_cache.ExtendLifetime(handle, AssetLifetime::Global);
+        EXPECT_EQ(m_cache.GetLifetime(handle), AssetLifetime::Global);
+
+        // A shorter lifetime never shortens it: neither when extending nor when the asset is added again.
+        m_cache.ExtendLifetime(handle, AssetLifetime::Level);
+        m_cache.Add("Textures/Wall.png", "reloaded wall", AssetLifetime::Level);
+        EXPECT_EQ(m_cache.GetLifetime(handle), AssetLifetime::Global);
+
+        m_cache.RemoveAll(AssetLifetime::Level);
+        EXPECT_TRUE(m_cache.IsValid(handle));
     }
 }

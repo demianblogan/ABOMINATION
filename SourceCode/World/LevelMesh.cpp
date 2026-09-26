@@ -2,37 +2,60 @@
 
 #include "World/BrushGeometry.h"
 #include "World/MapCoordinates.h"
+#include "World/TextureCoordinates.h"
 
 #include <glm/geometric.hpp>
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace Abomination::World
 {
-    LevelMesh BuildLevelMesh(const MapEntity& entity)
+    LevelMesh BuildLevelMesh(const MapEntity& entity, const TextureSizeLookup& getTextureSize)
     {
         LevelMesh result;
-        Renderer::MeshData& data = result.data;
         LevelMeshStatistics& counts = result.statistics;
+
+        // Texture name -> index of its part in result.parts, to find the part of a face without searching the list.
+        std::unordered_map<std::string, std::size_t> partIndices;
 
         for (const MapBrush& brush : entity.brushes)
         {
             ++counts.brushCount;
 
-            for (const Core::ConvexPolygon& polygon : BuildBrushPolygons(brush))
+            // One polygon per face, in the order of brush.faces: polygons[i] is the shape of brush.faces[i].
+            const std::vector<Core::ConvexPolygon> polygons = BuildBrushPolygons(brush);
+            for (std::size_t faceIndex = 0; faceIndex < polygons.size(); ++faceIndex)
             {
+                const Core::ConvexPolygon& polygon = polygons[faceIndex];
+                const MapFace& face = brush.faces[faceIndex];
+
                 // A face that does not exist (a plane that misses the brush) has no corners.
                 if (polygon.empty())
                     continue;
 
                 ++counts.faceCount;
 
+                // try_emplace adds the texture with the index of a new part only if it is not there yet; either way it
+                // returns the entry of the texture (and whether it was just added).
+                const auto [entry, isNewTexture] = partIndices.try_emplace(face.textureName, result.parts.size());
+                if (isNewTexture)
+                    result.parts.push_back(LevelMeshPart{.textureName = face.textureName});
+                Renderer::MeshData& data = result.parts[entry->second].data;
+
                 // The corners of the face in game coordinates. They are counter-clockwise seen from the front, so the
-                // cross product of two edges points out of the face: that is its normal.
+                // cross product of two edges points out of the face: that is its normal. Texture coordinates are
+                // calculated from the corner in map coordinates, the space the texture axes of the face are given in.
+                const glm::ivec2 textureSize = getTextureSize(face.textureName);
                 const auto firstVertex = static_cast<std::uint32_t>(data.vertices.size());
                 for (const glm::dvec3& corner : polygon)
-                    data.vertices.push_back(Renderer::MeshVertex{.position = ConvertMapPosition(corner)});
+                    data.vertices.push_back(Renderer::MeshVertex{
+                        .position = ConvertMapPosition(corner),
+                        .texCoord = CalculateTextureCoordinates(face, corner, textureSize),
+                    });
 
                 const glm::vec3 edge1 = data.vertices[firstVertex + 1].position - data.vertices[firstVertex].position;
                 const glm::vec3 edge2 = data.vertices[firstVertex + 2].position - data.vertices[firstVertex].position;

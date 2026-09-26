@@ -34,7 +34,7 @@ Abomination/
 ├── Documentation/      Project documentation
 ├── SourceCode/         Game source code, one folder per module
 ├── Tests/              GoogleTest unit tests, mirrors SourceCode/
-├── Tools/              Helper tools: TrenchBroom game configuration (level compiler later)
+├── Tools/              Helper tools: TrenchBroom game configuration, texture generator (level compiler later)
 ├── ThirdParty/         Third-party code not available in vcpkg (GLAD)
 ├── CMakeLists.txt
 ├── CMakePresets.json
@@ -113,7 +113,7 @@ A module may depend only on modules **below** it in this diagram.
 
 | Module        | Responsibility                                                  | Status  |
 |---------------|-----------------------------------------------------------------|---------|
-| `Core`        | Time (clock, frame timer, fixed timestep, FPS limit), frame statistics, logging, files, image decoding, asset handles and cache, `Transform`, `Name`, transform interpolation, planes and convex polygon clipping | 0.1 |
+| `Core`        | Time (clock, frame timer, fixed timestep, FPS limit), frame statistics, logging, files, image decoding, asset handles, cache and lifetime groups, `Transform`, `Name`, transform interpolation, planes and convex polygon clipping | 0.1 |
 | `Input`       | Keyboard and mouse state, actions and bindings (see section 7)  | 0.1     |
 | `Platform`    | SDL3 window (size from the monitor, screen modes), OpenGL context creation, OS events → `Input` | 0.1     |
 | `Renderer`    | Everything OpenGL. Exposes a high-level API (see section 6)     | 0.1     |
@@ -122,7 +122,7 @@ A module may depend only on modules **below** it in this diagram.
 | `Physics`     | Quake-style movement, collision against the level               | Planned |
 | `AI`          | Enemy behaviour, pathfinding                                    | Planned |
 | `Audio`       | Sounds and music (miniaudio)                                    | Planned |
-| `Gameplay`    | Game rules: free-fly camera, spin, demo crates (0.1–0.2); player, weapons, enemies | 0.1 |
+| `Gameplay`    | Game rules: free-fly camera, spin (0.1–0.2); player, weapons, enemies | 0.1 |
 | `UI`          | Dear ImGui debug overlay: menu bar, performance, assets, entity inspector, renderer (0.1–0.2); HUD and menus (later) | 0.1 |
 | `Save`        | Serialization of the game state                                 | Planned |
 | `Application` | Startup, shutdown, main loop, switching between game states     | 0.1     |
@@ -213,8 +213,7 @@ A module may depend only on modules **below** it in this diagram.
    folder of the executable.
 9. The `Application` constructor loads the system shaders of the renderer
    (`Renderer::LoadSystemShaders`) and creates the entities: the level
-   (`World::SpawnLevel`), the demo crates (`Gameplay::SpawnDemoCrates`) and
-   the camera at the player start of the map
+   (`World::SpawnLevel`) and the camera at the player start of the map
    (`Gameplay::SpawnFreeFlyCamera`). It happens there and not in `Create()`,
    because the registry is a member of `Application`; the asset handles in
    the components stay valid when `Application` is moved, because they are
@@ -338,11 +337,11 @@ Inside the renderer:
   (`MeshPrimitives` builds a cube, `World` builds the level). Vertex layout:
   position at location 0, texture coordinates at location 1, normal at
   location 2, for every mesh shader.
-- Shaders (`Assets/Shaders/`): `TexturedMesh` (a texture, no shading),
-  `SolidShaded` (for surfaces without textures: one gray color, lighter or
+- Shaders (`Assets/Shaders/`): `TexturedMesh` (a texture, no shading; for
+  models from 0.3), `TexturedShaded` (the level: its texture, lighter or
   darker by the direction the surface faces — half-Lambert shading with a
-  fixed made-up light direction, not real lighting) and `Wireframe` (one line
-  color).
+  fixed made-up light direction, not real lighting, so walls facing different
+  ways stay apart until lightmaps in 0.5) and `Wireframe` (one line color).
 - `TextureStore`, `ShaderStore`, `MeshStore`, grouped in `RenderAssets` — load
   every texture, shader program and mesh once and hand out handles (see
   section 9).
@@ -366,7 +365,9 @@ Inside the renderer:
   once by `LoadSystemShaders`.
 - **Renderer window** of the debug overlay (View > Renderer): Solid /
   Wireframe, draw calls and triangles of the last frame, brushes, faces and
-  triangles of the level.
+  triangles of the level, and *Reload*, which loads the map next to the
+  executable again (build the `CopyAssets` target first to copy a map saved
+  in TrenchBroom; the game does not have to be closed).
 
 Color textures are uploaded as `GL_RGBA8` without gamma correction for now;
 sRGB textures and an sRGB framebuffer come with lighting in 0.5.
@@ -485,8 +486,9 @@ An **asset** is data from a file that many objects use and that is loaded
 once: textures, shader programs and meshes now; materials, sounds, fonts
 later. A `.map` file is not an asset: `World` parses it and builds the level
 from it (see section 11). Only what the level is drawn with goes to the
-stores: its mesh, its textures (brush textures branch). JSON configurations
-are not assets either (`Config`).
+stores: its meshes and its textures. JSON configurations are not assets
+either (`Config`). How textures look and where they come from:
+`ART_DIRECTION.md`.
 
 **Files**
 
@@ -497,7 +499,7 @@ are not assets either (`Config`).
   `Platform::GetExecutableDirectory() / "Assets"`; the path is computed once
   in `Main.cpp` and passed down.
 - Asset paths are relative to `Assets/` and use forward slashes:
-  `"Textures/Crate.png"`, `"Shaders/TexturedMesh"` (a shader program is the
+  `"Textures/Episode1/Crate_Rotten.png"`, `"Shaders/TexturedMesh"` (a shader program is the
   `.vert` + `.frag` pair with that name).
 - The application knows the folders; every module knows the names of its own
   files (`TextureStore` gets the assets folder, `DebugOverlay` gets the assets
@@ -513,11 +515,13 @@ first, as OpenGL expects) → uploading to the GPU (`GLTexture`,
 **Handles and caches (0.2)**
 
 ```
-Core::AssetCache<Asset>                    slots: [0: Crate.png, gen 1] [1: free, gen 2] ...
-  Find(path) / Add(path, asset)            free slots: [1]
-  Get(handle) / Remove(handle)             path -> handle: "Textures/Crate.png" -> {0, 1}
+Core::AssetCache<Asset>                    slots: [0: Wall.png, gen 1, Level] [1: free, gen 2] ...
+  Find(path) / Add(path, asset, lifetime)  free slots: [1]
+  Get(handle) / Remove(handle)             path -> handle: "Textures/Wall.png" -> {0, 1}
+  RemoveAll(lifetime)
           ▲
-Renderer::TextureStore, ShaderStore        Load(path) -> handle, Get(handle) -> object
+Renderer::TextureStore, MeshStore,         Load(path, lifetime) -> handle, Get(handle) -> object
+         ShaderStore
           ▲
 Renderer::RenderAssets                     all graphics stores, owned by Application
 ```
@@ -536,9 +540,10 @@ Renderer::RenderAssets                     all graphics stores, owned by Applica
   keeps handles and asks for the object when it uses it.
 - The **stores** of each asset type load files and use a cache inside:
   `Renderer::TextureStore`, `Renderer::ShaderStore`, `Renderer::MeshStore`
-  (meshes built by code now, named like paths: `"Primitives/Cube"`, and the
-  level mesh under the path of its map, `"Maps/Test.map"`; loaded from model
-  files in 0.3); later the material store (0.3) and the sound store in `Audio`. There is no single
+  (meshes built by code now, named like paths: the level meshes as
+  `"Maps/Test.map#Episode1/Wall_MossyBrick"`, one per texture; loaded from
+  model files in 0.3); later the material store (0.3) and the sound store in
+  `Audio`. There is no single
   class that knows all asset types, so OpenGL stays in `Renderer` and sound in
   `Audio`.
 - `Renderer::RenderAssets` groups the stores of all graphics assets. Code that
@@ -549,15 +554,20 @@ Renderer::RenderAssets                     all graphics stores, owned by Applica
   path of the broken asset, so it is looked for and reported once, and a
   warning (texture) or error with the compiler log (shader) goes to the log.
   `Get()` never returns null: an invalid handle gives the fallback.
+- **Lifetime groups** (`Core::AssetLifetime`): every asset is **Global**
+  (the whole game: shaders, later weapons and the HUD) or **Level** (the
+  textures and meshes of the loaded level). A whole group is removed at once
+  (`RenderAssets::RemoveAll`, called by `World::UnloadLevel`), so nobody has
+  to track which object used which asset; the generations of the slots make
+  the handles of the removed level invalid. An asset asked for with both
+  lifetimes keeps the longer one. Texture and mesh stores take the lifetime
+  in every `Load`/`Add`; shader programs are always global.
 - **Assets window** of the debug overlay (View > Assets): every loaded
-  texture with its size and video memory (all mipmap levels), every shader
-  program, fallbacks marked in magenta.
+  texture with its size, video memory (all mipmap levels) and lifetime, every
+  mesh and shader program, fallbacks marked in magenta.
 
 **Planned:**
 
-- Lifetime by groups (0.2, brush textures branch, when a level brings assets
-  of its own): **global** assets live the whole game (weapons, HUD font),
-  **level** assets are removed when the next level starts.
 - Meshes from model files and materials (0.3); sounds in `Audio` (0.3); music is
   streamed, not loaded whole (0.8).
 - Hot reload of shaders and textures (0.5), packed archives with a virtual
@@ -581,9 +591,8 @@ Library: **EnTT 4.0.0** (`ThirdParty/EnTT`, see section 3).
   `Render`, so their order is visible in one place and every system takes the
   parameters it needs. `const entt::registry&` marks a system that only reads.
 - **The registry** (`entt::registry`) is owned by `Application` and passed to
-  systems as a parameter; there is no global access. Loading another level
-  will clear the entities of the previous one (together with the level asset
-  group, brush textures branch).
+  systems as a parameter; there is no global access. Unloading a level
+  (`World::UnloadLevel`) destroys its entities and removes its asset group.
 - **Entity numbers** are used where one entity refers to another (an enemy's
   target, a rocket's owner, a button's door), to add, remove or destroy
   components of a specific entity, and for events between entities. Systems
@@ -615,8 +624,8 @@ all entities (`registry.view<entt::entity>()`) and shows and edits the
 components of the selected one; section headers are colored by module.
 A new component type gets a small drawing function there.
 
-The static geometry of a level is **one** entity, not one entity per brush
-(see section 11). Collision data for it will be owned by the `World` module in
+The static geometry of a level is **one entity per texture**, not one entity
+per brush (see section 11). Collision data for it will be owned by the `World` module in
 structures made for collision, not stored in components.
 
 ## 11. World
@@ -626,9 +635,10 @@ The `World` module turns a TrenchBroom `.map` file into what the game draws
 
 ```
 Test.map ─► ParseMap ─► MapData ─► BuildBrushPolygons ─► BuildLevelMesh ─► SpawnLevel
-  text       tokens,     entities,    planes → polygons    polygons →         mesh store +
-             recursive   brushes,     (per brush)          triangles,          "World geometry"
-             descent     faces                             map → game axes     entity, player start
+  text       tokens,     entities,    planes → polygons    polygons →         meshes and entities
+             recursive   brushes,     (per brush)          triangles, UVs,     "World geometry: <texture>",
+             descent     faces                             one part per        player start
+                                                           texture
 ```
 
 - **Parsing** (`MapParser`, `MapData`): a tokenizer and a recursive descent
@@ -644,28 +654,45 @@ Test.map ─► ParseMap ─► MapData ─► BuildBrushPolygons ─► BuildLe
   (Sutherland–Hodgman, `Core::ClipPolygon`); what is left is the face, with
   corners counter-clockwise seen from outside. Points closer to a plane than
   `Core::PlaneTolerance` (1e-6 units) count as lying on it.
-- **Level mesh** (`LevelMesh`): all faces of the world become one `MeshData`
-  — convex polygons are split into triangles as a fan from their first corner,
-  the normal of a face is its plane normal. `LevelMeshStatistics` counts
-  brushes, faces and triangles for the Renderer window.
+- **Level mesh** (`LevelMesh`): convex polygons are split into triangles as a
+  fan from their first corner, the normal of a face is its plane normal. One
+  draw call draws with one texture, so the faces are split into one
+  `LevelMeshPart` per texture, in the order the textures first appear in the
+  map (the same map always gives the same parts). `LevelMeshStatistics`
+  counts brushes, faces and triangles for the Renderer window.
+- **Texture coordinates** (`TextureCoordinates`): the Valve 220 format stores
+  a U and a V axis, offsets and a scale for every face. For a corner:
+  texels = dot(corner, axis) / scale + offset, divided by the size of the
+  texture; V is negated, because it grows down the image in the map format and
+  up in OpenGL. The size of every texture comes from the caller
+  (`TextureSizeLookup`): `World` does not know where texture files are. A face
+  names its texture by its path in `Assets/Textures` without the extension
+  (`Episode1/Wall_MossyBrick`).
 - **Coordinates** (`MapCoordinates`): TrenchBroom has Z up and 32 units per
   meter, the game has Y up and meters: a map position `(x, y, z)` becomes
   `(x, z, −y) / 32`. A map angle (0° looks along +X, counter-clockwise from
   above) becomes a yaw of the game: angle − 90°.
-- **Spawning** (`LevelLoader`): `SpawnLevel` stores the mesh in the mesh store
-  under the path of the map and creates one entity, *World geometry*
-  (`Name`, `Transform`, `MeshRenderer` with the `SolidShaded` program until
-  brushes get textures), like the world is entity 0 in Quake. The whole level
-  is one draw call. `info_player_start` does not become an entity: its origin
-  (+22 units, the eye height of the Quake player) and angle are returned as
-  `PlayerStart`, and the camera is created there.
+- **Spawning** (`LevelLoader`): `SpawnLevel` loads the textures of the level
+  and stores one mesh per texture, both in the **Level** lifetime group, and
+  creates one entity per texture, *World geometry: Episode1/Wall_MossyBrick*
+  (`Name`, `Transform`, `MeshRenderer` with the `TexturedShaded` program);
+  together they play the part of entity 0, the world, in Quake. The level
+  costs one draw call per texture. `info_player_start` does not become an
+  entity: its origin (+22 units, the eye height of the Quake player) and angle
+  are returned as `PlayerStart`, and the camera is created there.
+- **Unloading** (`UnloadLevel`): destroys the entities of the level, then
+  removes the Level asset group. `Application` keeps the `LoadedLevel` and
+  reloads it from the Renderer window; the new map is read first, so a map
+  with an error leaves the current level in place.
 - Map geometry is converted once, at loading. The level stays where the map
-  puts it: the world entity has an identity transform.
+  puts it: the world entities have an identity transform.
 
-**Planned:** texture coordinates from the Valve 220 texture axes and drawing
-grouped by texture (brush textures branch); collision data from the brush
-planes (collision branch); entities from the map (enemies, pickups, doors,
-0.4–0.6); a level compiler with lightmaps and visibility (0.5).
+**Planned:** a class for the level (for example `World::Level`) that owns its
+entities, its collision data and its player start and loads and unloads
+itself, created with the collision data (collision branch), so `Application`
+does not collect level state; entities from the map (enemies, pickups, doors,
+0.4–0.6); a level compiler with lightmaps and visibility (0.5), which needs
+closed maps (a hole to the outside is a *leak*).
 
 ## 12. Data-driven design — Planned
 

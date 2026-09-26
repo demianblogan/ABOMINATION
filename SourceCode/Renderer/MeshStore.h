@@ -2,6 +2,7 @@
 
 #include "Core/AssetCache.h"
 #include "Core/AssetHandle.h"
+#include "Core/AssetLifetime.h"
 #include "Renderer/Mesh.h"
 #include "Renderer/MeshData.h"
 
@@ -25,9 +26,13 @@ namespace Abomination::Renderer
     public:
         MeshStore();
 
-        // Stores a mesh made of data under name and returns its handle. The same name again replaces the mesh and keeps
-        // the handle. Empty data (no triangles) cannot be drawn: the fallback cube is stored instead, with a warning.
-        MeshHandle Add(const std::string& name, const MeshData& data);
+        // Stores a mesh made of data under name for the lifetime and returns its handle. The same name again replaces the
+        // mesh and keeps the handle. Empty data (no triangles) cannot be drawn: the fallback cube is stored instead, with
+        // a warning.
+        MeshHandle Add(const std::string& name, const MeshData& data, Core::AssetLifetime lifetime);
+
+        // Removes every mesh of the lifetime group from video memory; their handles become invalid.
+        void RemoveAll(Core::AssetLifetime lifetime);
 
         // The handle of the mesh stored under name, or nothing.
         [[nodiscard]] std::optional<MeshHandle> Find(const std::string& name) const;
@@ -35,7 +40,7 @@ namespace Abomination::Renderer
         // The mesh of the handle. An invalid handle gives the fallback cube.
         [[nodiscard]] const Mesh& Get(MeshHandle handle) const;
 
-        // Calls visitor(name, mesh) for every stored mesh. For the Assets window of the debug overlay.
+        // Calls visitor(name, mesh, lifetime) for every stored mesh. For the Assets window of the debug overlay.
         template <typename Visitor>
         void VisitMeshes(Visitor&& visitor) const;
 

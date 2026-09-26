@@ -33,4 +33,7 @@ the license check before a commercial release.
 |------|--------|--------|---------|----------|-------|
 | `Fonts/JetBrainsMonoRegular.ttf` | The JetBrains Mono Project Authors | [JetBrains Mono 2.304](https://github.com/JetBrains/JetBrainsMono/releases/tag/v2.304) | SIL Open Font License 1.1 | Renamed from `JetBrainsMono-Regular.ttf` | Debug overlay font. The license must ship with the font |
 | `Fonts/JetBrainsMonoLicense.txt` | The JetBrains Mono Project Authors | Same archive, `OFL.txt` | — | Renamed from `OFL.txt` | License text of the font |
-| `Textures/Crate.png` | Alone Bull | Drawn by a script (64×64) | Own work | — | Wooden crate: frame, planks, diagonal brace, metal corners |
+| `Textures/Episode1/Wall_MossyBrick.png` | Alone Bull | `Tools/TextureGenerator` (64×64) | Own work | — | Old brick wall with moss, cracks and damp streaks |
+| `Textures/Episode1/Floor_WetFlagstone.png` | Alone Bull | `Tools/TextureGenerator` (64×64) | Own work | — | Wet stone slabs with mud in the joints |
+| `Textures/Episode1/Floor_RottenPlanks.png` | Alone Bull | `Tools/TextureGenerator` (64×64) | Own work | — | Rotten wooden planks with nails (stairs, bridges) |
+| `Textures/Episode1/Crate_Rotten.png` | Alone Bull | `Tools/TextureGenerator` (64×64) | Own work | — | Dark wooden crate: frame, diagonal brace, rusty iron corners, cracks |

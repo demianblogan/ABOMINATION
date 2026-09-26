@@ -12,7 +12,7 @@
 #include "Renderer/RenderSettings.h"
 #include "Renderer/RenderSystem.h"
 #include "UI/DebugOverlay.h"
-#include "World/LevelMesh.h"
+#include "World/LevelLoader.h"
 
 #include <entt/entt.hpp>
 
@@ -45,9 +45,9 @@ namespace Abomination
         [[nodiscard]] int Run();
 
     private:
-        // map: the parsed start map, whose entities the constructor creates.
+        // map: the parsed start map, whose entities the constructor creates. assetsDirectory is kept for loading maps later.
         Application(Platform::SDLLibrary SDLLibrary, Platform::Window window, Renderer::RenderAssets renderAssets,
-                    const World::MapData& map, UI::DebugOverlay debugOverlay);
+                    const World::MapData& map, UI::DebugOverlay debugOverlay, std::filesystem::path assetsDirectory);
 
         // The two kinds of updates of the main loop, named like in Unity:
         //   Update()      - once per frame: what must react immediately and does not depend on time
@@ -57,6 +57,10 @@ namespace Abomination
         //                   so the result does not depend on the frame rate.
         void Update();
         void FixedUpdate(float tickDuration);
+
+        // Reads the start map again and replaces the loaded level with it: the old entities and Level assets are removed,
+        // the new ones created. The camera stays where it is. If the map cannot be read, the old level stays.
+        void ReloadLevel();
 
         // Draws the frame (the game, then the debug overlay on top) and shows it on the screen.
         // frameStatistics: the numbers for the overlay.
@@ -73,11 +77,19 @@ namespace Abomination
         // Shaders the render system uses on its own (the wireframe), loaded once in the constructor.
         Renderer::SystemShaders m_systemShaders;
 
-        // How the scene is drawn (changed in the Renderer window of the overlay), what the last frame cost, and the size
-        // of the loaded level (both shown in the same window).
+        // How the scene is drawn (changed in the Renderer window of the overlay) and what the last frame cost (shown there).
         Renderer::RenderSettings m_renderSettings;
         Renderer::RenderStatistics m_renderStatistics;
-        World::LevelMeshStatistics m_levelStatistics;
+
+        // The folder with the game files, for loading maps after startup.
+        std::filesystem::path m_assetsDirectory;
+
+        // The loaded level: its entities, where the player starts and its statistics (shown in the Renderer window).
+        World::LoadedLevel m_level;
+
+        // Set by the Reload button of the Renderer window; the level is reloaded at the start of the next frame, not in the
+        // middle of drawing the overlay.
+        bool m_isLevelReloadRequested = false;
 
         // All entities of the game and their components. Components hold only handles to assets, never pointers, so they
         // stay valid when Application (and with it m_renderAssets) is moved out of Create().

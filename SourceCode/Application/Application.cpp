@@ -6,7 +6,6 @@
 #include "Core/Log.h"
 #include "Core/Transform.h"
 #include "Core/TransformInterpolation.h"
-#include "Gameplay/DemoCrates.h"
 #include "Gameplay/Spin.h"
 #include "Platform/SystemServices.h"
 #include "Renderer/DebugOutput.h"
@@ -18,7 +17,6 @@
 #include "World/LevelLoader.h"
 #include "World/MapParser.h"
 
-#include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 
 #include <utility>
@@ -33,12 +31,9 @@ namespace Abomination
         // A neutral dark gray, so the colors of the scene are easy to judge.
         constexpr glm::vec4 BackgroundColor{0.12f, 0.12f, 0.13f, 1.0f};
 
-        // The map loaded at start, relative to the assets folder. Also the name its geometry gets in the mesh store.
+        // The map loaded at start, relative to the assets folder. Its meshes are named after it in the mesh store
+        // ("Maps/Test.map#Episode1/Wall_MossyBrick").
         const std::string StartMapPath = "Maps/Test.map";
-
-        // The demo crates stand in the middle of the test room, on its floor (the room spans x from -14 to 2 meters and
-        // z from -2 to 14; the floor is at y = 0).
-        constexpr glm::vec3 DemoCratesCenter{-6.0f, 0.0f, 6.0f};
     }
 
     std::expected<Application, std::string> Application::Create(const std::filesystem::path& assetsDirectory)
@@ -81,26 +76,26 @@ namespace Abomination
             return std::unexpected(debugOverlay.error());
 
         return Application(std::move(*SDLLibrary), std::move(*window), std::move(renderAssets), *map,
-                           std::move(*debugOverlay));
+                           std::move(*debugOverlay), assetsDirectory);
     }
 
     Application::Application(Platform::SDLLibrary SDLLibrary, Platform::Window window, Renderer::RenderAssets renderAssets,
-                             const World::MapData& map, UI::DebugOverlay debugOverlay)
+                             const World::MapData& map, UI::DebugOverlay debugOverlay,
+                             std::filesystem::path assetsDirectory)
         : m_SDLLibrary(std::move(SDLLibrary))
         , m_window(std::move(window))
         , m_renderAssets(std::move(renderAssets))
+        , m_assetsDirectory(std::move(assetsDirectory))
         , m_debugOverlay(std::move(debugOverlay))
     {
         m_systemShaders = Renderer::LoadSystemShaders(m_renderAssets.shaders);
 
         // Entities are created here, not in Create(): the registry is a member, and the handles the components get from
         // m_renderAssets stay valid because they are numbers, not pointers.
-        const World::LoadedLevel level = World::SpawnLevel(m_registry, m_renderAssets, map, StartMapPath);
-        m_levelStatistics = level.statistics;
-        Gameplay::SpawnDemoCrates(m_registry, m_renderAssets, DemoCratesCenter);
+        m_level = World::SpawnLevel(m_registry, m_renderAssets, map, StartMapPath);
 
         // The camera starts where the map puts the player, at the height of the player's eyes.
-        m_camera = Gameplay::SpawnFreeFlyCamera(m_registry, level.playerStart.eyePosition, level.playerStart.yaw);
+        m_camera = Gameplay::SpawnFreeFlyCamera(m_registry, m_level.playerStart.eyePosition, m_level.playerStart.yaw);
     }
 
     int Application::Run()
@@ -149,6 +144,12 @@ namespace Abomination
 
     void Application::Update()
     {
+        if (m_isLevelReloadRequested)
+        {
+            m_isLevelReloadRequested = false;
+            ReloadLevel();
+        }
+
         // Actions of the application itself (not of the game), so they are handled here. Quitting only asks the window to
         // close: the frame is finished as usual and the main loop ends before the next one.
         if (m_actionStates.WasActionStarted(Input::Action::Quit))
@@ -197,6 +198,22 @@ namespace Abomination
         Gameplay::UpdateSpinningEntities(m_registry, tickDuration);
     }
 
+    void Application::ReloadLevel()
+    {
+        // The new map is read before anything is removed: a map with an error (for example saved in the middle of editing)
+        // leaves the current level as it is.
+        std::expected<World::MapData, std::string> map = World::LoadMapFile(m_assetsDirectory / StartMapPath);
+        if (!map.has_value())
+        {
+            Core::Log::Write(LogCategory::World, LogLevel::Error, "Level not reloaded: {}", map.error());
+
+            return;
+        }
+
+        World::UnloadLevel(m_registry, m_renderAssets, m_level);
+        m_level = World::SpawnLevel(m_registry, m_renderAssets, *map, StartMapPath);
+    }
+
     void Application::Render(const Core::FrameStatistics& frameStatistics)
     {
         const int widthInPixels = m_window.GetWidthInPixels();
@@ -235,7 +252,8 @@ namespace Abomination
             .registry = m_registry,
             .renderSettings = m_renderSettings,
             .renderStatistics = m_renderStatistics,
-            .levelStatistics = m_levelStatistics,
+            .levelStatistics = m_level.statistics,
+            .isLevelReloadRequested = m_isLevelReloadRequested,
         });
 
         m_window.SwapBuffers();

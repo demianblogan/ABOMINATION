@@ -12,7 +12,7 @@ namespace Abomination::Renderer
         : m_fallbackMesh(Mesh::Create(CreateCubeMeshData()))
     {}
 
-    MeshHandle MeshStore::Add(const std::string& name, const MeshData& data)
+    MeshHandle MeshStore::Add(const std::string& name, const MeshData& data, Core::AssetLifetime lifetime)
     {
         // An empty buffer cannot be created in OpenGL (glNamedBufferStorage needs a size above 0), and there would be
         // nothing to draw anyway.
@@ -21,13 +21,19 @@ namespace Abomination::Renderer
             Core::Log::Write(LogCategory::Renderer, LogLevel::Warning, "Mesh {} has no triangles, replaced by the fallback",
                              name);
 
-            return m_cache.Add(name, Mesh::Create(CreateCubeMeshData()));
+            return m_cache.Add(name, Mesh::Create(CreateCubeMeshData()), lifetime);
         }
 
         Core::Log::Write(LogCategory::Renderer, LogLevel::Debug, "Mesh added: {} ({} vertices, {} indices)", name,
                          data.vertices.size(), data.indices.size());
 
-        return m_cache.Add(name, Mesh::Create(data));
+        return m_cache.Add(name, Mesh::Create(data), lifetime);
+    }
+
+    void MeshStore::RemoveAll(Core::AssetLifetime lifetime)
+    {
+        // The returned names are not needed: unlike the texture store, this one remembers nothing else about its meshes.
+        m_cache.RemoveAll(lifetime);
     }
 
     std::optional<MeshHandle> MeshStore::Find(const std::string& name) const

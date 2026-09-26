@@ -17,6 +17,13 @@ namespace Abomination::World
 
     namespace
     {
+        // The texture of a face is a file in Assets/Textures, named in the map by its path there without the extension:
+        // "Episode1/Wall_MossyBrick" -> "Textures/Episode1/Wall_MossyBrick.png".
+        std::string MakeTexturePath(const std::string& textureName)
+        {
+            return "Textures/" + textureName + ".png";
+        }
+
         // The eyes of the Quake player are 22 units above the origin of info_player_start (the center of its box).
         constexpr double EyeHeightAboveOrigin = 22.0;
 
@@ -74,22 +81,53 @@ namespace Abomination::World
             return level;
         }
 
-        LevelMesh levelMesh = BuildLevelMesh(*world);
+        // Texture coordinates need the size of every texture, so the textures of the level are loaded here, into the Level
+        // lifetime group like the meshes below: UnloadLevel removes them all at once. A missing texture gets the
+        // checkerboard fallback of the store (and a warning in the log), with the size of the fallback.
+        const TextureSizeLookup getTextureSize = [&assets](const std::string& textureName)
+        {
+            const Renderer::TextureHandle handle =
+                assets.textures.Load(MakeTexturePath(textureName), Core::AssetLifetime::Level);
+            const Renderer::GLTexture& texture = assets.textures.Get(handle);
+            return glm::ivec2(texture.GetWidth(), texture.GetHeight());
+        };
+        LevelMesh levelMesh = BuildLevelMesh(*world, getTextureSize);
         level.statistics = levelMesh.statistics;
 
-        // The level has no textures yet (they come in the next branch), so it is drawn by the solid shaded program,
-        // which does not read a texture: the texture handle stays empty.
-        level.geometry = registry.create();
-        registry.emplace<Core::Name>(level.geometry, "World geometry");
-        registry.emplace<Core::Transform>(level.geometry);
-        registry.emplace<Renderer::MeshRenderer>(level.geometry, Renderer::MeshRenderer{
-            .mesh = assets.meshes.Add(mapName, levelMesh.data),
-            .shaderProgram = assets.shaders.Load("Shaders/SolidShaded"),
-        });
+        // One entity per texture: every one is one draw call with its own texture. The textures were loaded above, so
+        // Load() only returns their handles now.
+        const Renderer::ShaderHandle shaderProgram = assets.shaders.Load("Shaders/TexturedShaded");
+        for (const LevelMeshPart& part : levelMesh.parts)
+        {
+            const entt::entity entity = registry.create();
+            registry.emplace<Core::Name>(entity, "World geometry: " + part.textureName);
+            registry.emplace<Core::Transform>(entity);
+            registry.emplace<Renderer::MeshRenderer>(entity, Renderer::MeshRenderer{
+                .mesh = assets.meshes.Add(mapName + "#" + part.textureName, part.data, Core::AssetLifetime::Level),
+                .texture = assets.textures.Load(MakeTexturePath(part.textureName), Core::AssetLifetime::Level),
+                .shaderProgram = shaderProgram,
+            });
+            level.geometry.push_back(entity);
+        }
 
-        Core::Log::Write(LogCategory::World, LogLevel::Info, "Level {} loaded: {} brushes, {} faces, {} triangles", mapName,
-                         level.statistics.brushCount, level.statistics.faceCount, level.statistics.triangleCount);
+        Core::Log::Write(LogCategory::World, LogLevel::Info, "Level {} loaded: {} brushes, {} faces, {} triangles, {} textures",
+                         mapName, level.statistics.brushCount, level.statistics.faceCount, level.statistics.triangleCount,
+                         levelMesh.parts.size());
 
         return level;
+    }
+
+    void UnloadLevel(entt::registry& registry, Renderer::RenderAssets& assets, LoadedLevel& level)
+    {
+        // The entities first: their components hold handles to the assets removed below. A removed handle would only
+        // draw the fallback, but nothing should be left referring to a level that is gone.
+        for (const entt::entity entity : level.geometry)
+            if (registry.valid(entity))
+                registry.destroy(entity);
+
+        assets.RemoveAll(Core::AssetLifetime::Level);
+        level = {};
+
+        Core::Log::Write(LogCategory::World, LogLevel::Info, "Level unloaded");
     }
 }

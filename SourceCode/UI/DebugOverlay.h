@@ -52,6 +52,7 @@ namespace Abomination::UI
         Renderer::RenderSettings& renderSettings;
         const Renderer::RenderStatistics& renderStatistics;
         const World::LevelMeshStatistics& levelStatistics;
+        bool& isLevelReloadRequested;
     };
 
     // Developer overlay drawn with Dear ImGui on top of the game: a menu bar with debug windows and settings.

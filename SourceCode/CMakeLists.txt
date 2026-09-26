@@ -19,6 +19,7 @@ set(LIBRARY_SOURCES
 
     Core/AssetCache.h
     Core/AssetHandle.h
+    Core/AssetLifetime.h
     Core/BuildConfiguration.h
     Core/Clock.h
     Core/ConvexPolygon.h
@@ -47,8 +48,6 @@ set(LIBRARY_SOURCES
     Core/Version.h
     Core/Version.cpp.in
 
-    Gameplay/DemoCrates.h
-    Gameplay/DemoCrates.cpp
     Gameplay/FreeFlyCamera.h
     Gameplay/FreeFlyCameraController.h
     Gameplay/FreeFlyCameraController.cpp
@@ -135,6 +134,8 @@ set(LIBRARY_SOURCES
     World/MapData.cpp
     World/MapParser.h
     World/MapParser.cpp
+    World/TextureCoordinates.h
+    World/TextureCoordinates.cpp
 )
 
 add_library(AbominationCore STATIC

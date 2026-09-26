@@ -165,6 +165,7 @@ The current build (milestone 0.2 in progress) has a free-fly camera in a test le
 | ✍️ [Code Style](Documentation/CODE_STYLE.md)         | Naming, formatting and C++/GLSL conventions           |
 | 🌿 [Git Conventions](Documentation/GIT_CONVENTIONS.md) | Branches, commits, pull requests, versions          |
 | 🧱 [Level Editing](Documentation/LEVEL_EDITING.md)  | Setting up TrenchBroom and building maps              |
+| 🎨 [Art Direction](Documentation/ART_DIRECTION.md)  | Episodes, palettes and rules for textures             |
 | 📦 [Assets](Documentation/ASSETS.md)                 | Third-party assets and their licenses                 |
 | 🧩 [Third-Party](Documentation/THIRD_PARTY.md)     | Libraries and tools with their licenses               |
 

@@ -44,10 +44,11 @@ can be placed. This is described by two files kept in the repository:
 `Assets/Maps/Test.map` is the first map, used to develop map loading:
 
 1. *File → New Map*, choose *Abomination*, map format *Valve*.
-2. In the material browser (the *Face* tab of the right panel) select `Crate`
-   in the *Textures* collection: new brushes get the selected material. A map
-   stores the texture of a face by its file name without the extension
-   (`Crate` for `Assets/Textures/Crate.png`).
+2. In the material browser (the *Face* tab of the right panel) select a
+   texture, for example `Wall_MossyBrick` in the *Episode1* collection: new
+   brushes get the selected material. Every folder in `Assets/Textures` is a
+   collection; a map stores the texture of a face by its path in
+   `Assets/Textures` without the extension (`Episode1/Wall_MossyBrick`).
 3. **Room.** In the 3D view, left-drag on the grid to draw a box of about
    512 × 512 units, then raise it to 256 units (hold `Alt` while dragging to
    change the height). With the box selected, use *Edit → CSG → Hollow*: the
@@ -68,12 +69,19 @@ TrenchBroom, build (so the changed file is copied next to the executable)
 and start the game. The camera appears at `info_player_start`, looking in the
 direction of its angle.
 
-- Until brushes get textures, every face is drawn in one gray, lighter or
-  darker by the direction it faces, so walls, floor and ceiling are told
-  apart.
+- Faces are drawn with their textures, lighter or darker by the direction
+  they face, so walls, floor and ceiling stay apart until real lighting (0.5).
+  A texture that is missing shows as a magenta and black checkerboard, with a
+  warning in the log.
 - *View > Renderer* in the debug overlay (<kbd>F1</kbd>) switches to
   *Wireframe* to show how faces are split into triangles, and shows how many
   brushes, faces and triangles the level has.
+- **Without restarting the game:** save the map, build only the
+  `CopyAssets` target (`cmake --build --preset debug --target CopyAssets`,
+  it works while the game runs) and press *Reload* in the Renderer window.
+- **Sizes:** the player is 56 units tall (eyes at about 46). A usual crate is
+  32 units (1 m) with the crate texture at scale 0.5; a 64-unit crate is a
+  large container, taller than the player.
 - A map that cannot be read stops the game with an error dialog giving the
   line of the problem. A brush face that does not make sense (three points on
   one line) is skipped.

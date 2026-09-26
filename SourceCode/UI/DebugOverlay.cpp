@@ -1,5 +1,6 @@
 #include "UI/DebugOverlay.h"
 
+#include "Core/AssetLifetime.h"
 #include "Core/BuildConfiguration.h"
 #include "Core/FixedTimestep.h"
 #include "Core/FrameLimiter.h"
@@ -381,7 +382,8 @@ namespace Abomination::UI
 
             // The header shows the totals, so they are summed before the list is drawn.
             std::size_t totalTextureMemory = 0;
-            assets.textures.VisitTextures([&](const std::string&, const Renderer::GLTexture& texture, bool)
+            assets.textures.VisitTextures(
+                [&](const std::string&, const Renderer::GLTexture& texture, bool, Core::AssetLifetime)
             {
                 totalTextureMemory += texture.GetVideoMemorySize();
             });
@@ -394,17 +396,18 @@ namespace Abomination::UI
             {
                 // A table: columns are set up once, then every row is filled cell by cell with TableNextColumn().
                 // RowBg alternates the row background, Borders draws the lines between cells.
-                if (ImGui::BeginTable("TextureTable", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders))
+                if (ImGui::BeginTable("TextureTable", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders))
                 {
                     // The path takes all the width the other columns leave; the others are as wide as their contents.
                     ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch);
                     ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed);
                     ImGui::TableSetupColumn("Video memory", ImGuiTableColumnFlags_WidthFixed);
                     ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthFixed);
+                    ImGui::TableSetupColumn("Lifetime", ImGuiTableColumnFlags_WidthFixed);
                     ImGui::TableHeadersRow();
 
                     assets.textures.VisitTextures([](const std::string& path, const Renderer::GLTexture& texture,
-                                                     bool isFallback)
+                                                     bool isFallback, Core::AssetLifetime lifetime)
                     {
                         ImGui::TableNextColumn();
                         ImGui::TextUnformatted(path.c_str());
@@ -418,6 +421,9 @@ namespace Abomination::UI
 
                         ImGui::TableNextColumn();
                         DrawAssetStatus(isFallback);
+
+                        ImGui::TableNextColumn();
+                        ImGui::TextUnformatted(Core::GetAssetLifetimeName(lifetime).data());
                     });
 
                     ImGui::EndTable();
@@ -425,7 +431,7 @@ namespace Abomination::UI
             }
 
             std::size_t totalMeshMemory = 0;
-            assets.meshes.VisitMeshes([&](const std::string&, const Renderer::Mesh& mesh)
+            assets.meshes.VisitMeshes([&](const std::string&, const Renderer::Mesh& mesh, Core::AssetLifetime)
             {
                 totalMeshMemory += mesh.GetVideoMemorySize();
             });
@@ -434,15 +440,17 @@ namespace Abomination::UI
                                                          FormatByteSize(totalMeshMemory));
             if (ImGui::CollapsingHeader(meshesHeader.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
             {
-                if (ImGui::BeginTable("MeshTable", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders))
+                if (ImGui::BeginTable("MeshTable", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders))
                 {
                     ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch);
                     ImGui::TableSetupColumn("Vertices", ImGuiTableColumnFlags_WidthFixed);
                     ImGui::TableSetupColumn("Triangles", ImGuiTableColumnFlags_WidthFixed);
                     ImGui::TableSetupColumn("Video memory", ImGuiTableColumnFlags_WidthFixed);
+                    ImGui::TableSetupColumn("Lifetime", ImGuiTableColumnFlags_WidthFixed);
                     ImGui::TableHeadersRow();
 
-                    assets.meshes.VisitMeshes([](const std::string& name, const Renderer::Mesh& mesh)
+                    assets.meshes.VisitMeshes([](const std::string& name, const Renderer::Mesh& mesh,
+                                                 Core::AssetLifetime lifetime)
                     {
                         ImGui::TableNextColumn();
                         ImGui::TextUnformatted(name.c_str());
@@ -456,6 +464,9 @@ namespace Abomination::UI
 
                         ImGui::TableNextColumn();
                         ImGui::TextUnformatted(FormatByteSize(mesh.GetVideoMemorySize()).c_str());
+
+                        ImGui::TableNextColumn();
+                        ImGui::TextUnformatted(Core::GetAssetLifetimeName(lifetime).data());
                     });
 
                     ImGui::EndTable();
@@ -512,6 +523,13 @@ namespace Abomination::UI
             ImGui::Text("Brushes:   %d", context.levelStatistics.brushCount);
             ImGui::Text("Faces:     %d", context.levelStatistics.faceCount);
             ImGui::Text("Triangles: %d", context.levelStatistics.triangleCount);
+
+            // Loads the map file next to the executable again. After saving the map in TrenchBroom, building the CopyAssets
+            // target copies it there without closing the game (the executable itself cannot be rebuilt while it runs).
+            if (ImGui::Button("Reload"))
+                context.isLevelReloadRequested = true;
+            ImGui::SetItemTooltip("Loads the map again.\n"
+                                  "Build the CopyAssets target first to copy a map saved in TrenchBroom.");
         }
         ImGui::End();
     }

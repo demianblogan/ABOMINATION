@@ -56,17 +56,33 @@ namespace Abomination::Platform
         {
             return ImGui::GetCurrentContext() != nullptr && ImGui::GetIO().WantCaptureMouse;
         }
+
+        // The display scale functions of SDL return 0 when the scale cannot be read; 1 (100%, no scaling) is the safe value
+        // then. Used for both the scale of the primary display and the scale of the window.
+        float MakeValidDisplayScale(float displayScale)
+        {
+            return displayScale > 0.0f ? displayScale : 1.0f;
+        }
     }
 
     std::expected<Window, std::string> Window::Create(const WindowSettings& settings)
     {
         SetOpenGLAttributes();
 
-        SDL_WindowFlags flags = SDL_WINDOW_OPENGL;
+        // SDL_WINDOW_HIGH_PIXEL_DENSITY asks for a back buffer with the real pixels of the screen. Without it, on systems
+        // that scale windows themselves the game would be drawn at a lower resolution and stretched (blurry).
+        SDL_WindowFlags flags = SDL_WINDOW_OPENGL | SDL_WINDOW_HIGH_PIXEL_DENSITY;
         if (settings.isResizable)
             flags |= SDL_WINDOW_RESIZABLE;
 
-        SDL_Window* window = SDL_CreateWindow(settings.title.c_str(), settings.width, settings.height, flags);
+        // The requested size is meant at 100%. On a 4K monitor with a display scale of 200% the pixels are twice as small,
+        // so the window is made twice as big in pixels to look the same size on the screen. The window does not exist
+        // yet, so the scale of the primary display is used.
+        const float initialScale = MakeValidDisplayScale(SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay()));
+        const int width = static_cast<int>(static_cast<float>(settings.width) * initialScale);
+        const int height = static_cast<int>(static_cast<float>(settings.height) * initialScale);
+
+        SDL_Window* window = SDL_CreateWindow(settings.title.c_str(), width, height, flags);
         if (window == nullptr)
             return std::unexpected(std::format("Failed to create the window: {}", SDL_GetError()));
 
@@ -84,10 +100,12 @@ namespace Abomination::Platform
         int heightInPixels = 0;
         SDL_GetWindowSizeInPixels(window, &widthInPixels, &heightInPixels);
 
-        Core::Log::Write(LogCategory::Platform, LogLevel::Info, "Window created: {}x{} pixels", widthInPixels,
-                         heightInPixels);
+        const float displayScale = MakeValidDisplayScale(SDL_GetWindowDisplayScale(window));
+        Core::Log::Write(LogCategory::Platform, LogLevel::Info, "Window created: {}x{} pixels, display scale {:.0f}%",
+                         widthInPixels, heightInPixels, displayScale * 100.0f);
 
         Window result(window, context, widthInPixels, heightInPixels);
+        result.m_displayScale = displayScale;
         result.SetVSyncEnabled(settings.isVSyncEnabled);
 
         return result;
@@ -107,6 +125,7 @@ namespace Abomination::Platform
         , m_isVSyncEnabled(other.m_isVSyncEnabled)
         , m_widthInPixels(other.m_widthInPixels)
         , m_heightInPixels(other.m_heightInPixels)
+        , m_displayScale(other.m_displayScale)
     {}
 
     Window& Window::operator=(Window&& other) noexcept
@@ -120,6 +139,7 @@ namespace Abomination::Platform
             m_isVSyncEnabled = other.m_isVSyncEnabled;
             m_widthInPixels = other.m_widthInPixels;
             m_heightInPixels = other.m_heightInPixels;
+            m_displayScale = other.m_displayScale;
         }
 
         return *this;
@@ -157,6 +177,13 @@ namespace Abomination::Platform
                     m_heightInPixels = event.window.data2;
                     Core::Log::Write(LogCategory::Platform, LogLevel::Debug, "Window resized: {}x{} pixels", m_widthInPixels,
                                      m_heightInPixels);
+                    break;
+
+                // The display scale of Windows changed, or the window moved to a monitor with another scale.
+                case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
+                    m_displayScale = MakeValidDisplayScale(SDL_GetWindowDisplayScale(m_window));
+                    Core::Log::Write(LogCategory::Platform, LogLevel::Info, "Display scale changed: {:.0f}%",
+                                     m_displayScale * 100.0f);
                     break;
 
                 // A key went down. "repeat" marks the copies the operating system sends while the key is held.
@@ -254,6 +281,11 @@ namespace Abomination::Platform
     int Window::GetHeightInPixels() const noexcept
     {
         return m_heightInPixels;
+    }
+
+    float Window::GetDisplayScale() const noexcept
+    {
+        return m_displayScale;
     }
 
     SDL_Window* Window::GetSDLWindow() const noexcept

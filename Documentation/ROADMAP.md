@@ -66,7 +66,7 @@ seen (collision, map geometry) get debug visualizations in the overlay.
 | 1 | `feat/fixed-timestep`           | ✅     | Debug menu bar (View, Settings > Display), V-Sync toggle, FPS limit; fixed 60 Hz simulation ticks with interpolation; main loop split into `Update`, `FixedUpdate`, `Render` |
 | 2 | `feat/asset-manager`            | ✅     | Typed asset handles and a generic cache, texture and shader stores with magenta fallbacks, `RenderAssets`; Assets window in the overlay, debug windows remember their positions; crate texture on the cube |
 | 3 | `feat/ecs-scene`                | ✅     | EnTT 4.0.0; `Mesh` asset and mesh store; crates as entities (`Transform`, `MeshRenderer`, `Spin`), render system; interpolation as a system for every moving entity; the camera as an entity, the renderer gets a `View`; entity inspector with module colors; `DemoScene` removed |
-| 4 | `feat/debug-ui-scaling`         | ⏳     | Debug overlay follows the display scale of Windows (DPI) for 4K monitors, plus a manual UI scale in Settings > Display |
+| 4 | `feat/debug-ui-scaling`         | ✅     | Debug overlay follows the display scale of Windows (DPI) for 4K monitors, plus a manual UI scale in Settings > Display |
 | 5 | `feat/map-geometry`             | ⏳     | TrenchBroom game configuration, `.map` parser, brushes → polygons (plane intersection), Z-up → Y-up; asset lifetime groups (global and level); solid and wireframe render modes, map statistics |
 | 6 | `feat/brush-textures`           | ⏳     | Texture coordinates from the Valve 220 format, drawing grouped by texture |
 | 7 | `feat/collision`                | ⏳     | Axis-aligned box traced against brushes (Quake-style), debug drawing of boxes and traces |
@@ -101,6 +101,8 @@ far:
   360, Unlimited) plus the refresh rate of the player's monitor detected
   through SDL; a separate lower limit for menus and an unfocused window.
   The debug menu keeps its own list of values chosen for testing.
+  The same settings file keeps the UI scale of the debug overlay, which is
+  not saved between runs before that.
 
 ## Backlog
 

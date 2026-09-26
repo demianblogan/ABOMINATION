@@ -159,9 +159,10 @@ The current build (milestone 0.1) has a free-fly camera around a test cube.
 |--------------------------------------------|-------------------------------------------------------|
 | 🗺️ [Roadmap](Documentation/ROADMAP.md)               | Milestones from 0.1 to 1.0 and the current plan       |
 | 🔨 [Building](Documentation/BUILDING.md)           | Requirements and build instructions                   |
-| 🏛️ [Architecture](Documentation/ARCHITECTURE.md)     | Modules, dependency rules, main loop, renderer, ECS   |
+| 🏛️ [Architecture](Documentation/ARCHITECTURE.md)     | Modules, dependency rules, main loop, renderer, ECS, world |
 | ✍️ [Code Style](Documentation/CODE_STYLE.md)         | Naming, formatting and C++/GLSL conventions           |
 | 🌿 [Git Conventions](Documentation/GIT_CONVENTIONS.md) | Branches, commits, pull requests, versions          |
+| 🧱 [Level Editing](Documentation/LEVEL_EDITING.md)  | Setting up TrenchBroom and building maps              |
 | 📦 [Assets](Documentation/ASSETS.md)                 | Third-party assets and their licenses                 |
 | 🧩 [Third-Party](Documentation/THIRD_PARTY.md)     | Libraries and tools with their licenses               |
 

@@ -60,3 +60,22 @@ can be placed. This is described by two files kept in the repository:
 6. **Player start.** In the entity browser (right panel) drag
    `info_player_start` onto the floor.
 7. Save as `Assets/Maps/Test.map`.
+
+## Seeing the map in the game
+
+The game loads `Assets/Maps/Test.map` at startup: save the map in
+TrenchBroom, build (so the changed file is copied next to the executable)
+and start the game. The camera appears at `info_player_start`, looking in the
+direction of its angle.
+
+- Until brushes get textures, every face is drawn in one gray, lighter or
+  darker by the direction it faces, so walls, floor and ceiling are told
+  apart.
+- *View > Renderer* in the debug overlay (<kbd>F1</kbd>) switches to
+  *Wireframe* to show how faces are split into triangles, and shows how many
+  brushes, faces and triangles the level has.
+- A map that cannot be read stops the game with an error dialog giving the
+  line of the problem. A brush face that does not make sense (three points on
+  one line) is skipped.
+- Avoid faces of different objects lying in one plane (a box standing flush
+  with the top of a step shows flickering stripes there, *z-fighting*).

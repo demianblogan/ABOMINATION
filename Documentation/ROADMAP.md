@@ -69,7 +69,7 @@ seen (collision, map geometry) get debug visualizations in the overlay.
 | 4 | `feat/debug-ui-scaling`         | ✅     | Debug overlay follows the display scale of Windows (DPI) for 4K monitors, plus a manual UI scale in Settings > Display |
 | 5 | `feat/map-geometry`             | ✅     | TrenchBroom game configuration and a test map; `.map` parser (Valve 220); brushes → polygons by clipping with planes; the level as one mesh and one entity, Z-up → Y-up, camera at the player start; solid shaded and wireframe render modes; Renderer window with frame and level statistics; demo crates moved into the test room |
 | 6 | `feat/screen-mode`              | ✅     | Escape quits the game; key combinations in input bindings; windowed size calculated from the monitor (75% of the usable area, 16:9) instead of a fixed size; screen modes Windowed, Borderless (default) and exclusive Fullscreen in Settings > Display and with Alt+Enter |
-| 7 | `feat/brush-textures`           | ⏳     | Texture coordinates from the Valve 220 format, drawing grouped by texture; generated wall and floor textures; crates become brushes of the test map and the demo crates are removed; asset lifetime groups (global and level) |
+| 7 | `feat/brush-textures`           | ✅     | Art direction (4 episodes, palettes, texture rules) and a texture generator; Episode 1 wall, floor, planks and crate textures; texture coordinates from the Valve 220 axes; the level drawn in one part per texture with texture and direction shading; crates as brushes of the test map, demo crates removed; asset lifetime groups (Global, Level), level unloading and a Reload button |
 | 8 | `feat/collision`                | ⏳     | Axis-aligned box traced against brushes (Quake-style), debug drawing of boxes and traces |
 | 9 | `feat/player-movement`          | ⏳     | Quake movement: acceleration, friction, jumping, gravity, sliding along walls, stepping up stairs; noclip toggle; speedometer |
 
@@ -85,8 +85,9 @@ far:
 - **0.2** — decide collision approach: own AABB-vs-brush collision with a BVH;
   Jolt Physics only for queries if it becomes necessary. Learn TrenchBroom:
   game configuration, entity definitions, `.map` format, Z-up → Y-up.
-  Asset lifetime groups (global and per-level) come with the first assets of
-  a level (branch 7); loading a level clears the entities of the previous one.
+  A class for the level (for example `World::Level`: its entities, collision
+  data and player start, loading and unloading itself) comes with the
+  collision data (branch 8), so `Application` stops collecting level state.
   The free-fly camera becomes a debug noclip mode next to the player camera
   (branch 9). A search field above the entity list of the inspector once a map
   brings hundreds of entities.
@@ -102,7 +103,7 @@ far:
   compiler, if measurements on large maps show that drawing the whole level
   as one mesh is too slow.
 - **0.6** — pickups spin and bob in place, like in Quake (the `Spin`
-  component of the demo crates lives on there).
+  component made for the old demo crates is kept for them).
 - **0.8** — every gameplay component must be serializable; keep this in mind
   from 0.2 onwards. Options menu, *Display > FPS limit*: a list of common
   monitor refresh rates (30, 60, 75, 90, 100, 120, 144, 165, 180, 240, 280,

@@ -35,6 +35,10 @@ transitions between them (grass to a wooden bridge, the bridge to stone).
 - **Scale as in Quake:** 1 texel = 1 map unit (about 3 cm). Most textures are
   64 × 64 texels (a 2 × 2 m patch of wall); large details (gates, ornaments)
   128 × 128. Pixels stay crisp (`GL_NEAREST` filtering).
+- **Size of objects is not the size of their texture.** The player is 56
+  units tall; a usual crate is 32 units (1 m) with its 64 × 64 texture at
+  scale 0.5, a 64-unit crate is a large container. Small objects may use
+  scale 0.5 like this (2 texels per unit); walls and floors stay at scale 1.
 - **Tileable:** a texture repeats on a wall without visible seams.
 - **No painted light.** Real light and shadows come with lightmaps (0.5); light
   painted into a texture would fight them. Only slight darkening in crevices

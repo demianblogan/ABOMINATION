@@ -81,11 +81,14 @@ namespace Abomination::World
             return level;
         }
 
-        // Texture coordinates need the size of every texture, so the textures of the level are loaded here. A missing
-        // texture gets the checkerboard fallback of the store (and a warning in the log), with the size of the fallback.
+        // Texture coordinates need the size of every texture, so the textures of the level are loaded here, into the Level
+        // lifetime group like the meshes below: UnloadLevel removes them all at once. A missing texture gets the
+        // checkerboard fallback of the store (and a warning in the log), with the size of the fallback.
         const TextureSizeLookup getTextureSize = [&assets](const std::string& textureName)
         {
-            const Renderer::GLTexture& texture = assets.textures.Get(assets.textures.Load(MakeTexturePath(textureName)));
+            const Renderer::TextureHandle handle =
+                assets.textures.Load(MakeTexturePath(textureName), Core::AssetLifetime::Level);
+            const Renderer::GLTexture& texture = assets.textures.Get(handle);
             return glm::ivec2(texture.GetWidth(), texture.GetHeight());
         };
         LevelMesh levelMesh = BuildLevelMesh(*world, getTextureSize);
@@ -100,8 +103,8 @@ namespace Abomination::World
             registry.emplace<Core::Name>(entity, "World geometry: " + part.textureName);
             registry.emplace<Core::Transform>(entity);
             registry.emplace<Renderer::MeshRenderer>(entity, Renderer::MeshRenderer{
-                .mesh = assets.meshes.Add(mapName + "#" + part.textureName, part.data),
-                .texture = assets.textures.Load(MakeTexturePath(part.textureName)),
+                .mesh = assets.meshes.Add(mapName + "#" + part.textureName, part.data, Core::AssetLifetime::Level),
+                .texture = assets.textures.Load(MakeTexturePath(part.textureName), Core::AssetLifetime::Level),
                 .shaderProgram = shaderProgram,
             });
             level.geometry.push_back(entity);
@@ -112,5 +115,19 @@ namespace Abomination::World
                          levelMesh.parts.size());
 
         return level;
+    }
+
+    void UnloadLevel(entt::registry& registry, Renderer::RenderAssets& assets, LoadedLevel& level)
+    {
+        // The entities first: their components hold handles to the assets removed below. A removed handle would only
+        // draw the fallback, but nothing should be left referring to a level that is gone.
+        for (const entt::entity entity : level.geometry)
+            if (registry.valid(entity))
+                registry.destroy(entity);
+
+        assets.RemoveAll(Core::AssetLifetime::Level);
+        level = {};
+
+        Core::Log::Write(LogCategory::World, LogLevel::Info, "Level unloaded");
     }
 }

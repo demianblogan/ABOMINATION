@@ -50,10 +50,14 @@ namespace Abomination::Renderer
         , m_fallbackTexture(CreateFallbackTexture())
     {}
 
-    TextureHandle TextureStore::Load(const std::string& path)
+    TextureHandle TextureStore::Load(const std::string& path, Core::AssetLifetime lifetime)
     {
         if (const std::optional<TextureHandle> loadedHandle = m_cache.Find(path); loadedHandle.has_value())
+        {
+            m_cache.ExtendLifetime(*loadedHandle, lifetime);
+
             return *loadedHandle;
+        }
 
         // make_preferred() turns the forward slashes of the asset path into the backslashes of Windows,
         // so paths in log messages do not mix both.
@@ -68,12 +72,19 @@ namespace Abomination::Renderer
 
             m_fallbackPaths.insert(path);
 
-            return m_cache.Add(path, CreateFallbackTexture());
+            return m_cache.Add(path, CreateFallbackTexture(), lifetime);
         }
 
         Core::Log::Write(LogCategory::Renderer, LogLevel::Debug, "Texture loaded: {}", path);
 
-        return m_cache.Add(path, std::move(*texture));
+        return m_cache.Add(path, std::move(*texture), lifetime);
+    }
+
+    void TextureStore::RemoveAll(Core::AssetLifetime lifetime)
+    {
+        // A removed path may be loaded again later, and its file may exist by then: it is no longer a fallback.
+        for (const std::string& path : m_cache.RemoveAll(lifetime))
+            m_fallbackPaths.erase(path);
     }
 
     const GLTexture& TextureStore::Get(TextureHandle handle) const

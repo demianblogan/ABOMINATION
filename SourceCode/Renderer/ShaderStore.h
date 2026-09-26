@@ -24,6 +24,8 @@ namespace Abomination::Renderer
     // The fallback program expects what every program of the game provides: the vertex position at location 0 and
     // the model, view and projection matrices at uniform locations 0, 1 and 2.
     //
+    // Shader programs are always global (see Core::AssetLifetime): there are a handful of them, and every level uses them.
+    //
     // Requires a current OpenGL context. Move-only.
     class ShaderStore
     {
@@ -64,7 +66,7 @@ namespace Abomination::Renderer
     template <typename Visitor>
     void ShaderStore::VisitPrograms(Visitor&& visitor) const
     {
-        m_cache.VisitAssets([&](const std::string& name, const GLShaderProgram&)
+        m_cache.VisitAssets([&](const std::string& name, const GLShaderProgram&, Core::AssetLifetime)
         {
             visitor(name, m_fallbackNames.contains(name));
         });

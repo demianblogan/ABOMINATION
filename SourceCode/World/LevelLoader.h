@@ -39,4 +39,8 @@ namespace Abomination::World
     // Problems (no world, no player start) are logged; the level is then partly or fully empty.
     [[nodiscard]] LoadedLevel SpawnLevel(entt::registry& registry, Renderer::RenderAssets& assets, const MapData& map,
                                          const std::string& mapName);
+
+    // Destroys the entities of the level and removes every asset of the Level lifetime group (its textures and meshes)
+    // from video memory. Global assets (shaders) stay. level is reset to an empty level.
+    void UnloadLevel(entt::registry& registry, Renderer::RenderAssets& assets, LoadedLevel& level);
 }

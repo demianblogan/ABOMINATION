@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/AssetHandle.h"
+#include "Core/AssetLifetime.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -29,12 +30,24 @@ namespace Abomination::Core
         // Returns the handle of the asset loaded from this path, or nothing if it is not in the cache.
         [[nodiscard]] std::optional<AssetHandle<Asset>> Find(std::string_view path) const;
 
-        // Stores an asset loaded from path and returns its handle. If an asset with this path is already stored, it is
-        // replaced and its handle stays the same (everyone holding the handle gets the new asset).
-        AssetHandle<Asset> Add(std::string path, Asset asset);
+        // Stores an asset loaded from path in the lifetime group and returns its handle. If an asset with this path is
+        // already stored, it is replaced and its handle stays the same (everyone holding the handle gets the new asset);
+        // it keeps the longer of its old and the new lifetime.
+        AssetHandle<Asset> Add(std::string path, Asset asset, AssetLifetime lifetime = AssetLifetime::Global);
+
+        // Moves the asset to the longer of its lifetime and the given one: a level texture that the whole game asks for
+        // becomes global. A shorter lifetime never shortens it. Does nothing for an invalid handle.
+        void ExtendLifetime(AssetHandle<Asset> handle, AssetLifetime lifetime);
 
         // Removes the asset; the handle and all its copies become invalid. Does nothing for an invalid handle.
         void Remove(AssetHandle<Asset> handle);
+
+        // Removes every asset of the lifetime group, like Remove() for each of them, and returns their paths (the stores
+        // forget what they remember about these paths).
+        std::vector<std::string> RemoveAll(AssetLifetime lifetime);
+
+        // The lifetime group of the asset; Global for an invalid handle. For tools.
+        [[nodiscard]] AssetLifetime GetLifetime(AssetHandle<Asset> handle) const;
 
         // The asset, or nullptr if the handle is invalid: default-constructed, or its asset was removed.
         // The pointer is valid until the next Add() or Remove(): the vector of slots may move its elements.
@@ -50,7 +63,7 @@ namespace Abomination::Core
         // How many assets are stored.
         [[nodiscard]] std::size_t GetCount() const noexcept;
 
-        // Calls visitor(path, asset) for every stored asset, in slot order. For tools that list the assets
+        // Calls visitor(path, asset, lifetime) for every stored asset, in slot order. For tools that list the assets
         // (the Assets window of the debug overlay). The visitor must not add or remove assets.
         template <typename Visitor>
         void VisitAssets(Visitor&& visitor) const;
@@ -62,6 +75,7 @@ namespace Abomination::Core
             std::optional<Asset> asset;
             std::string path;
             std::uint32_t generation = 1;
+            AssetLifetime lifetime = AssetLifetime::Global;
         };
 
         // Lets m_handlesByPath find a std::string key by a std::string_view ("heterogeneous lookup", C++20).
@@ -113,12 +127,14 @@ namespace Abomination::Core
     }
 
     template <typename Asset>
-    AssetHandle<Asset> AssetCache<Asset>::Add(std::string path, Asset asset)
+    AssetHandle<Asset> AssetCache<Asset>::Add(std::string path, Asset asset, AssetLifetime lifetime)
     {
         // The same path again: replace the asset in its slot, the handle does not change.
         if (const std::optional<AssetHandle<Asset>> existingHandle = Find(path); existingHandle.has_value())
         {
-            m_slots[existingHandle->index].asset = std::move(asset);
+            Slot& slot = m_slots[existingHandle->index];
+            slot.asset = std::move(asset);
+            slot.lifetime = GetLongerLifetime(slot.lifetime, lifetime);
 
             return *existingHandle;
         }
@@ -139,6 +155,7 @@ namespace Abomination::Core
         Slot& slot = m_slots[index];
         slot.asset = std::move(asset);
         slot.path = path;
+        slot.lifetime = lifetime;
 
         const AssetHandle<Asset> handle{.index = index, .generation = slot.generation};
         m_handlesByPath.emplace(std::move(path), handle);
@@ -161,6 +178,44 @@ namespace Abomination::Core
         // same slot the counter would wrap around to 0 and then to old values; a game never gets anywhere near that.
         ++slot.generation;
         m_freeSlotIndices.push_back(handle.index);
+    }
+
+    template <typename Asset>
+    void AssetCache<Asset>::ExtendLifetime(AssetHandle<Asset> handle, AssetLifetime lifetime)
+    {
+        if (!IsValid(handle))
+            return;
+
+        Slot& slot = m_slots[handle.index];
+        slot.lifetime = GetLongerLifetime(slot.lifetime, lifetime);
+    }
+
+    template <typename Asset>
+    std::vector<std::string> AssetCache<Asset>::RemoveAll(AssetLifetime lifetime)
+    {
+        std::vector<std::string> removedPaths;
+        for (std::uint32_t index = 0; index < m_slots.size(); ++index)
+        {
+            const Slot& slot = m_slots[index];
+            if (!slot.asset.has_value() || slot.lifetime != lifetime)
+                continue;
+
+            // Remove() clears the path, so it is copied first. Remove() does not add or erase slots (it only frees this
+            // one), so going on through the vector by index stays correct.
+            removedPaths.push_back(slot.path);
+            Remove(AssetHandle<Asset>{.index = index, .generation = slot.generation});
+        }
+
+        return removedPaths;
+    }
+
+    template <typename Asset>
+    AssetLifetime AssetCache<Asset>::GetLifetime(AssetHandle<Asset> handle) const
+    {
+        if (!IsValid(handle))
+            return AssetLifetime::Global;
+
+        return m_slots[handle.index].lifetime;
     }
 
     template <typename Asset>
@@ -215,6 +270,6 @@ namespace Abomination::Core
         // Free slots are skipped: they hold no asset.
         for (const Slot& slot : m_slots)
             if (slot.asset.has_value())
-                visitor(slot.path, *slot.asset);
+                visitor(slot.path, *slot.asset, slot.lifetime);
     }
 }

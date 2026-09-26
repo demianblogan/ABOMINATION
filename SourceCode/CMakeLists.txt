@@ -19,6 +19,7 @@ set(LIBRARY_SOURCES
 
     Core/AssetCache.h
     Core/AssetHandle.h
+    Core/AssetLifetime.h
     Core/BuildConfiguration.h
     Core/Clock.h
     Core/ConvexPolygon.h

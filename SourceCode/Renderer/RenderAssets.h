@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/AssetLifetime.h"
 #include "Renderer/MeshStore.h"
 #include "Renderer/ShaderStore.h"
 #include "Renderer/TextureStore.h"
@@ -20,5 +21,13 @@ namespace Abomination::Renderer
         TextureStore textures;
         ShaderStore shaders;
         MeshStore meshes;
+
+        // Removes every texture and mesh of the lifetime group (loading the next level removes the Level group). Shader
+        // programs are always global.
+        void RemoveAll(Core::AssetLifetime lifetime)
+        {
+            textures.RemoveAll(lifetime);
+            meshes.RemoveAll(lifetime);
+        }
     };
 }

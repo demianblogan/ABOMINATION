@@ -2,6 +2,7 @@
 
 #include "Core/AssetCache.h"
 #include "Core/AssetHandle.h"
+#include "Core/AssetLifetime.h"
 #include "Renderer/GLTexture.h"
 
 #include <cstddef>
@@ -27,15 +28,19 @@ namespace Abomination::Renderer
         explicit TextureStore(std::filesystem::path assetsDirectory);
 
         // Returns the texture loaded from path, loading it on the first call. path is relative to the assets directory
-        // and uses forward slashes: "Textures/Crate.png". The same path always gives the same handle.
-        [[nodiscard]] TextureHandle Load(const std::string& path);
+        // and uses forward slashes: "Textures/Episode1/Crate_Rotten.png". The same path always gives the same handle.
+        // The texture stays loaded for the lifetime (the longer one if it is asked for again with another lifetime).
+        [[nodiscard]] TextureHandle Load(const std::string& path, Core::AssetLifetime lifetime);
+
+        // Removes every texture of the lifetime group from video memory; their handles become invalid.
+        void RemoveAll(Core::AssetLifetime lifetime);
 
         // The texture of the handle. An invalid handle (default-constructed or of a removed texture) gives the
         // checkerboard, so drawing code never has to check for nullptr.
         [[nodiscard]] const GLTexture& Get(TextureHandle handle) const;
 
-        // Calls visitor(path, texture, isFallback) for every loaded texture; isFallback is true for a missing or broken
-        // file replaced by the checkerboard. For the Assets window of the debug overlay.
+        // Calls visitor(path, texture, isFallback, lifetime) for every loaded texture; isFallback is true for a missing or
+        // broken file replaced by the checkerboard. For the Assets window of the debug overlay.
         template <typename Visitor>
         void VisitTextures(Visitor&& visitor) const;
 
@@ -58,9 +63,9 @@ namespace Abomination::Renderer
     template <typename Visitor>
     void TextureStore::VisitTextures(Visitor&& visitor) const
     {
-        m_cache.VisitAssets([&](const std::string& path, const GLTexture& texture)
+        m_cache.VisitAssets([&](const std::string& path, const GLTexture& texture, Core::AssetLifetime lifetime)
         {
-            visitor(path, texture, m_fallbackPaths.contains(path));
+            visitor(path, texture, m_fallbackPaths.contains(path), lifetime);
         });
     }
 }

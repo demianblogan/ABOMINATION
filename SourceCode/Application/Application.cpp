@@ -4,6 +4,7 @@
 #include "Core/FrameStatistics.h"
 #include "Core/FrameTimer.h"
 #include "Core/Log.h"
+#include "Core/TransformInterpolation.h"
 #include "Gameplay/DemoLevel.h"
 #include "Gameplay/Spin.h"
 #include "Platform/SystemServices.h"
@@ -152,6 +153,9 @@ namespace Abomination
 
     void Application::FixedUpdate(float tickDuration)
     {
+        // First of all: remember where every interpolated entity is before this tick moves anything.
+        Core::StorePreviousTransforms(m_registry);
+
         // Remembered before the camera moves, so a frame can be drawn anywhere between this position and the new one.
         m_previousCameraPosition = m_camera.GetPosition();
         m_cameraController.UpdateMovement(m_camera, m_actionStates, tickDuration);
@@ -171,7 +175,8 @@ namespace Abomination
         if (widthInPixels > 0 && heightInPixels > 0)
         {
             const float aspectRatio = static_cast<float>(widthInPixels) / static_cast<float>(heightInPixels);
-            Renderer::DrawMeshes(m_registry, GetInterpolatedCamera(), aspectRatio, m_renderAssets);
+            Renderer::DrawMeshes(m_registry, GetInterpolatedCamera(), aspectRatio, m_fixedTimestep.GetInterpolationFactor(),
+                                 m_renderAssets);
         }
 
         // The overlay is drawn last, on top of the game.

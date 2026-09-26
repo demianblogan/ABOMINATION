@@ -12,6 +12,7 @@ set(TEST_SOURCES
     Core/ImageTests.cpp
     Core/LogTests.cpp
     Core/TransformTests.cpp
+    Core/TransformInterpolationTests.cpp
     Core/VersionTests.cpp
 
     Gameplay/FreeFlyCameraControllerTests.cpp

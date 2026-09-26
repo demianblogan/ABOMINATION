@@ -1,6 +1,7 @@
 #include "Renderer/RenderSystem.h"
 
 #include "Core/Transform.h"
+#include "Core/TransformInterpolation.h"
 #include "Renderer/MeshRenderer.h"
 
 #include <glad/gl.h>
@@ -20,7 +21,8 @@ namespace Abomination::Renderer
         constexpr std::uint32_t AlbedoTextureUnit = 0;
     }
 
-    void DrawMeshes(const entt::registry& registry, const Camera& camera, float aspectRatio, const RenderAssets& assets)
+    void DrawMeshes(const entt::registry& registry, const Camera& camera, float aspectRatio, float interpolationFactor,
+                    const RenderAssets& assets)
     {
         // Depth test: for every pixel the depth buffer remembers how far the closest surface drawn there is.
         // A new pixel is drawn only if it is closer (GL_LESS, the default); otherwise it is hidden and thrown away.
@@ -37,11 +39,18 @@ namespace Abomination::Renderer
         const glm::mat4 projection = camera.GetProjectionMatrix(aspectRatio);
 
         // A view: all entities that have both components (const: this system only reads them). each() calls the
-        // function for every such entity with references to its components; the entity number itself is not needed
-        // here, and EnTT passes it only to functions that ask for it as the first parameter.
+        // function for every such entity; because the function asks for the entity as its first parameter, EnTT passes
+        // it too. Here it is needed to look for a component that is not part of the view.
         const auto meshEntities = registry.view<const Core::Transform, const MeshRenderer>();
-        meshEntities.each([&](const Core::Transform& transform, const MeshRenderer& meshRenderer)
+        meshEntities.each([&](entt::entity entity, const Core::Transform& transform, const MeshRenderer& meshRenderer)
         {
+            // try_get returns nullptr if the entity has no such component: only moving entities have a previous transform.
+            const Core::PreviousTransform* previousTransform = registry.try_get<Core::PreviousTransform>(entity);
+            const Core::Transform drawnTransform = previousTransform == nullptr
+                                                       ? transform
+                                                       : Core::InterpolateTransform(previousTransform->value, transform,
+                                                                                    interpolationFactor);
+
             // The handles are turned into objects at the moment of use (see AssetCache::Get).
             const GLShaderProgram& shaderProgram = assets.shaders.Get(meshRenderer.shaderProgram);
             const GLTexture& texture = assets.textures.Get(meshRenderer.texture);
@@ -50,7 +59,7 @@ namespace Abomination::Renderer
             // Every entity binds its program and texture again, even if the previous one used the same. That is fine
             // for a few dozen objects; sorting draws by program and texture (batching) comes when there are hundreds.
             shaderProgram.Use();
-            shaderProgram.SetUniform(ModelUniform, Core::CalculateModelMatrix(transform));
+            shaderProgram.SetUniform(ModelUniform, Core::CalculateModelMatrix(drawnTransform));
             shaderProgram.SetUniform(ViewUniform, view);
             shaderProgram.SetUniform(ProjectionUniform, projection);
             texture.Bind(AlbedoTextureUnit);

@@ -1,6 +1,7 @@
 #include "Gameplay/DemoLevel.h"
 
 #include "Core/Transform.h"
+#include "Core/TransformInterpolation.h"
 #include "Gameplay/Spin.h"
 #include "Renderer/MeshPrimitives.h"
 #include "Renderer/MeshRenderer.h"
@@ -50,11 +51,14 @@ namespace Abomination::Gameplay
         SpawnCrate(registry, crateLook, {0.0f, 1.0f, 0.0f}, 1.0f);
 
         // Two small crates floating above and turning: an entity is a crate that spins because it has one more
-        // component, not because it is a different class.
+        // component, not because it is a different class. They move in ticks, so they are interpolated to be drawn
+        // smoothly at any frame rate; the standing crates do not need it.
         const entt::entity leftSpinner = SpawnCrate(registry, crateLook, {-1.6f, 2.2f, 0.0f}, 0.5f);
         registry.emplace<Spin>(leftSpinner, Spin{.axis = {0.6f, 1.0f, 0.0f}, .speed = 0.8f});
+        Core::EnableInterpolation(registry, leftSpinner);
 
         const entt::entity rightSpinner = SpawnCrate(registry, crateLook, {1.6f, 2.2f, 0.0f}, 0.5f);
         registry.emplace<Spin>(rightSpinner, Spin{.axis = {0.0f, 1.0f, 0.3f}, .speed = -1.5f});
+        Core::EnableInterpolation(registry, rightSpinner);
     }
 }

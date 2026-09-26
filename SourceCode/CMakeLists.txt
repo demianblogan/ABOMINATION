@@ -37,6 +37,8 @@ set(LIBRARY_SOURCES
     Core/Log.cpp
     Core/Transform.h
     Core/Transform.cpp
+    Core/TransformInterpolation.h
+    Core/TransformInterpolation.cpp
     Core/Version.h
     Core/Version.cpp.in
 

@@ -68,7 +68,7 @@ seen (collision, map geometry) get debug visualizations in the overlay.
 | 3 | `feat/ecs-scene`                | ✅     | EnTT 4.0.0; `Mesh` asset and mesh store; crates as entities (`Transform`, `MeshRenderer`, `Spin`), render system; interpolation as a system for every moving entity; the camera as an entity, the renderer gets a `View`; entity inspector with module colors; `DemoScene` removed |
 | 4 | `feat/debug-ui-scaling`         | ✅     | Debug overlay follows the display scale of Windows (DPI) for 4K monitors, plus a manual UI scale in Settings > Display |
 | 5 | `feat/map-geometry`             | ✅     | TrenchBroom game configuration and a test map; `.map` parser (Valve 220); brushes → polygons by clipping with planes; the level as one mesh and one entity, Z-up → Y-up, camera at the player start; solid shaded and wireframe render modes; Renderer window with frame and level statistics; demo crates moved into the test room |
-| 6 | `feat/screen-mode`              | ⏳     | Screen mode in Settings > Display (Windowed, Borderless, Fullscreen); Escape quits the game (an input action); a smaller default window |
+| 6 | `feat/screen-mode`              | ✅     | Escape quits the game; key combinations in input bindings; windowed size calculated from the monitor (75% of the usable area, 16:9) instead of a fixed size; screen modes Windowed, Borderless (default) and exclusive Fullscreen in Settings > Display and with Alt+Enter |
 | 7 | `feat/brush-textures`           | ⏳     | Texture coordinates from the Valve 220 format, drawing grouped by texture; generated wall and floor textures; crates become brushes of the test map and the demo crates are removed; asset lifetime groups (global and level) |
 | 8 | `feat/collision`                | ⏳     | Axis-aligned box traced against brushes (Quake-style), debug drawing of boxes and traces |
 | 9 | `feat/player-movement`          | ⏳     | Quake movement: acceleration, friction, jumping, gravity, sliding along walls, stepping up stairs; noclip toggle; speedometer |
@@ -109,8 +109,9 @@ far:
   360, Unlimited) plus the refresh rate of the player's monitor detected
   through SDL; a separate lower limit for menus and an unfocused window.
   The debug menu keeps its own list of values chosen for testing.
-  The same settings file keeps the UI scale of the debug overlay, which is
-  not saved between runs before that.
+  The same settings file keeps the UI scale of the debug overlay and the
+  screen mode, which are not saved between runs before that. *Display >
+  Resolution* for exclusive fullscreen (the desktop resolution until then).
 
 ## Backlog
 

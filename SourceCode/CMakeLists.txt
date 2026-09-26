@@ -101,6 +101,7 @@ set(LIBRARY_SOURCES
     Renderer/RenderAssets.h
     Renderer/RenderCommands.h
     Renderer/RenderCommands.cpp
+    Renderer/RenderSettings.h
     Renderer/RenderSystem.h
     Renderer/RenderSystem.cpp
     Renderer/ShaderStore.h

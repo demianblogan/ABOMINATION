@@ -8,7 +8,10 @@
 #include "Platform/Window.h"
 #include "Renderer/OpenGLLoader.h"
 #include "Renderer/RenderAssets.h"
+#include "Renderer/RenderSettings.h"
+#include "Renderer/RenderSystem.h"
 #include "UI/UIScale.h"
+#include "World/LevelMesh.h"
 
 #include <imgui.h>
 
@@ -76,6 +79,9 @@ namespace Abomination::UI
         // position and size it was left at.
         constexpr ImVec2 AssetsWindowInitialPosition(450.0f, 40.0f);
         constexpr ImVec2 AssetsWindowInitialSize(620.0f, 360.0f);
+
+        // The Renderer window opens for the first time at the right edge of the default window.
+        constexpr ImVec2 RendererWindowInitialPosition(900.0f, 40.0f);
 
         // The color of assets replaced by a fallback: the same magenta as the fallbacks themselves.
         constexpr ImVec4 FallbackTextColor(1.0f, 0.0f, 1.0f, 1.0f);
@@ -184,6 +190,9 @@ namespace Abomination::UI
 
             if (m_isEntitiesWindowOpen)
                 m_entitiesWindow.Draw(&m_isEntitiesWindowOpen, context.registry, context.renderAssets);
+
+            if (m_isRendererWindowOpen)
+                DrawRendererWindow(context);
         }
 
         // 3. ImGui turns the recorded windows into lists of triangles, and the OpenGL backend draws them.
@@ -217,6 +226,7 @@ namespace Abomination::UI
             ImGui::MenuItem("Performance", nullptr, &m_isPerformanceWindowOpen);
             ImGui::MenuItem("Assets", nullptr, &m_isAssetsWindowOpen);
             ImGui::MenuItem("Entities", nullptr, &m_isEntitiesWindowOpen);
+            ImGui::MenuItem("Renderer", nullptr, &m_isRendererWindowOpen);
             ImGui::EndMenu();
         }
 
@@ -455,6 +465,35 @@ namespace Abomination::UI
                     ImGui::EndTable();
                 }
             }
+        }
+        ImGui::End();
+    }
+
+    void DebugOverlay::DrawRendererWindow(const DebugOverlayContext& context)
+    {
+        // AlwaysAutoResize: the window is exactly as big as its contents, which do not change much.
+        ImGui::SetNextWindowPos(ScaleToUI(RendererWindowInitialPosition), ImGuiCond_FirstUseEver);
+        if (ImGui::Begin("Renderer", &m_isRendererWindowOpen, ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            // Two radio buttons for one setting: RadioButton(label, isActive) shows which one is chosen and returns true
+            // when it is clicked.
+            ImGui::TextUnformatted("Mode");
+            Renderer::RenderSettings& settings = context.renderSettings;
+            if (ImGui::RadioButton("Solid", !settings.isWireframeEnabled))
+                settings.isWireframeEnabled = false;
+            ImGui::SameLine();
+            if (ImGui::RadioButton("Wireframe", settings.isWireframeEnabled))
+                settings.isWireframeEnabled = true;
+
+            ImGui::SeparatorText("Last frame");
+            ImGui::Text("Draw calls: %d", context.renderStatistics.drawCallCount);
+            ImGui::SetItemTooltip("One per drawn mesh. Many small draws cost more than a few large ones.");
+            ImGui::Text("Triangles:  %d", context.renderStatistics.triangleCount);
+
+            ImGui::SeparatorText("Level");
+            ImGui::Text("Brushes:   %d", context.levelStatistics.brushCount);
+            ImGui::Text("Faces:     %d", context.levelStatistics.faceCount);
+            ImGui::Text("Triangles: %d", context.levelStatistics.triangleCount);
         }
         ImGui::End();
     }

@@ -1,15 +1,40 @@
 #pragma once
 
 #include "Renderer/RenderAssets.h"
+#include "Renderer/RenderSettings.h"
+#include "Renderer/ShaderStore.h"
 #include "Renderer/View.h"
 
 #include <entt/entt.hpp>
 
 namespace Abomination::Renderer
 {
+    // What one call of DrawMeshes sent to the GPU, for the debug overlay.
+    struct RenderStatistics
+    {
+        // glDrawElements calls: one per drawn mesh. Every call has a cost of its own on the CPU and in the driver, so
+        // thousands of small draws are slower than a few large ones, even with the same number of triangles.
+        int drawCallCount = 0;
+        int triangleCount = 0;
+    };
+
+    // Shaders the render system draws with on its own, whatever shader an entity has chosen.
+    struct SystemShaders
+    {
+        // Draws every mesh in one color when the wireframe is on (see RenderSettings).
+        ShaderHandle wireframe;
+    };
+
+    // Loads the system shaders. Called once at startup, after the stores are created.
+    [[nodiscard]] SystemShaders LoadSystemShaders(ShaderStore& shaders);
+
     // The render system: draws every entity that has a Core::Transform and a MeshRenderer, as seen from the view.
     // Entities with a Core::PreviousTransform are drawn at fraction interpolationFactor of the way from their previous
     // to their current transform (see Core/TransformInterpolation.h); the others at their current transform.
-    // Only reads the registry: drawing never changes the game.
-    void DrawMeshes(const entt::registry& registry, const View& view, float interpolationFactor, const RenderAssets& assets);
+    // settings choose how to draw: filled, with the shader of every entity, or as a wireframe, with the wireframe shader
+    // of systemShaders for every entity. Only reads the registry: drawing never changes the game.
+    // Returns how much was drawn.
+    RenderStatistics DrawMeshes(const entt::registry& registry, const View& view, float interpolationFactor,
+                                const RenderAssets& assets, const SystemShaders& systemShaders,
+                                const RenderSettings& settings);
 }

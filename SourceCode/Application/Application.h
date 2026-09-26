@@ -9,7 +9,10 @@
 #include "Platform/SDLLibrary.h"
 #include "Platform/Window.h"
 #include "Renderer/RenderAssets.h"
+#include "Renderer/RenderSettings.h"
+#include "Renderer/RenderSystem.h"
 #include "UI/DebugOverlay.h"
+#include "World/LevelMesh.h"
 
 #include <entt/entt.hpp>
 
@@ -66,6 +69,15 @@ namespace Abomination
 
         // Every graphics asset of the game, loaded once.
         Renderer::RenderAssets m_renderAssets;
+
+        // Shaders the render system uses on its own (the wireframe), loaded once in the constructor.
+        Renderer::SystemShaders m_systemShaders;
+
+        // How the scene is drawn (changed in the Renderer window of the overlay), what the last frame cost, and the size
+        // of the loaded level (both shown in the same window).
+        Renderer::RenderSettings m_renderSettings;
+        Renderer::RenderStatistics m_renderStatistics;
+        World::LevelMeshStatistics m_levelStatistics;
 
         // All entities of the game and their components. Components hold only handles to assets, never pointers, so they
         // stay valid when Application (and with it m_renderAssets) is moved out of Create().

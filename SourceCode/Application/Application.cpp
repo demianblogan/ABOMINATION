@@ -91,9 +91,12 @@ namespace Abomination
         , m_renderAssets(std::move(renderAssets))
         , m_debugOverlay(std::move(debugOverlay))
     {
+        m_systemShaders = Renderer::LoadSystemShaders(m_renderAssets.shaders);
+
         // Entities are created here, not in Create(): the registry is a member, and the handles the components get from
         // m_renderAssets stay valid because they are numbers, not pointers.
         const World::LoadedLevel level = World::SpawnLevel(m_registry, m_renderAssets, map, StartMapPath);
+        m_levelStatistics = level.statistics;
         Gameplay::SpawnDemoCrates(m_registry, m_renderAssets, DemoCratesCenter);
 
         // The camera starts where the map puts the player, at the height of the player's eyes.
@@ -190,6 +193,9 @@ namespace Abomination
         Renderer::SetViewport(widthInPixels, heightInPixels);
         Renderer::ClearFrame(BackgroundColor);
 
+        // Nothing drawn, nothing counted: a minimized window shows zeros in the Renderer window.
+        m_renderStatistics = {};
+
         // A minimized window has a height of 0: there is nothing to draw, and the aspect ratio would divide by zero.
         if (widthInPixels > 0 && heightInPixels > 0)
         {
@@ -203,7 +209,8 @@ namespace Abomination
             const Renderer::View view =
                 Renderer::CalculateView(cameraTransform, m_registry.get<Renderer::CameraLens>(m_camera), aspectRatio);
 
-            Renderer::DrawMeshes(m_registry, view, interpolationFactor, m_renderAssets);
+            m_renderStatistics = Renderer::DrawMeshes(m_registry, view, interpolationFactor, m_renderAssets,
+                                                      m_systemShaders, m_renderSettings);
         }
 
         // The overlay is drawn last, on top of the game.
@@ -214,6 +221,9 @@ namespace Abomination
             .frameLimiter = m_frameLimiter,
             .renderAssets = m_renderAssets,
             .registry = m_registry,
+            .renderSettings = m_renderSettings,
+            .renderStatistics = m_renderStatistics,
+            .levelStatistics = m_levelStatistics,
         });
 
         m_window.SwapBuffers();

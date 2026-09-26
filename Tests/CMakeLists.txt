@@ -37,6 +37,7 @@ set(TEST_SOURCES
     World/LevelMeshTests.cpp
     World/MapCoordinatesTests.cpp
     World/MapParserTests.cpp
+    World/TextureCoordinatesTests.cpp
 )
 
 add_executable(AbominationTests

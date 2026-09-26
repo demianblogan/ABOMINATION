@@ -3,11 +3,13 @@
 
 #include <glm/geometric.hpp>
 #include <glm/vec3.hpp>
+#include <glm/vec2.hpp>
 #include <gtest/gtest.h>
 
 #include <cmath>
 #include <cstddef>
 #include <string>
+#include <vector>
 #include <string_view>
 
 namespace Abomination::World
@@ -35,7 +37,8 @@ namespace Abomination::World
             const std::expected<MapData, std::string> map = ParseMap(mapText);
             EXPECT_TRUE(map.has_value()) << (map.has_value() ? "" : map.error());
 
-            return BuildLevelMesh(map.value().entities.at(0));
+            // Every texture is 64 x 64 texels.
+            return BuildLevelMesh(map.value().entities.at(0), [](const std::string&) { return glm::ivec2(64, 64); });
         }
     }
 
@@ -92,5 +95,45 @@ namespace Abomination::World
             const glm::vec3 triangleFacing = glm::cross(b.position - a.position, c.position - a.position);
             EXPECT_GT(glm::dot(triangleFacing, a.normal), 0.0f);
         }
+    }
+
+    TEST(LevelMesh, EveryFaceOfCubeShowsTextureOnce)
+    {
+        // Every face of the cube is 64 x 64 units with texture axes along its edges, so with a 64 x 64 texture its
+        // corners get texture coordinates 0 and 1: the texture fits the face exactly once.
+        const LevelMesh mesh = BuildFromMap(CubeMap);
+        ASSERT_FALSE(mesh.data.vertices.empty());
+
+        bool hasZero = false;
+        bool hasOne = false;
+        for (const Renderer::MeshVertex& vertex : mesh.data.vertices)
+            for (const float coordinate : {vertex.texCoord.x, vertex.texCoord.y})
+            {
+                const bool isZero = std::abs(coordinate) < Tolerance;
+                const bool isOne = std::abs(coordinate - 1.0f) < Tolerance;
+                EXPECT_TRUE(isZero || isOne) << coordinate;
+                hasZero = hasZero || isZero;
+                hasOne = hasOne || isOne;
+            }
+
+        EXPECT_TRUE(hasZero);
+        EXPECT_TRUE(hasOne);
+    }
+
+    TEST(LevelMesh, TextureSizeIsAskedByTextureName)
+    {
+        const std::expected<MapData, std::string> map = ParseMap(CubeMap);
+        ASSERT_TRUE(map.has_value());
+
+        std::vector<std::string> askedNames;
+        const LevelMesh mesh = BuildLevelMesh(map.value().entities.at(0), [&askedNames](const std::string& name)
+        {
+            askedNames.push_back(name);
+            return glm::ivec2(64, 64);
+        });
+
+        ASSERT_EQ(askedNames.size(), 6u); // once per face
+        for (const std::string& name : askedNames)
+            EXPECT_EQ(name, "Crate");
     }
 }

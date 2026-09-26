@@ -17,6 +17,13 @@ namespace Abomination::World
 
     namespace
     {
+        // The texture of a face is a file in Assets/Textures, named in the map by its path there without the extension:
+        // "Episode1/Wall_MossyBrick" -> "Textures/Episode1/Wall_MossyBrick.png".
+        std::string MakeTexturePath(const std::string& textureName)
+        {
+            return "Textures/" + textureName + ".png";
+        }
+
         // The eyes of the Quake player are 22 units above the origin of info_player_start (the center of its box).
         constexpr double EyeHeightAboveOrigin = 22.0;
 
@@ -74,11 +81,18 @@ namespace Abomination::World
             return level;
         }
 
-        LevelMesh levelMesh = BuildLevelMesh(*world);
+        // Texture coordinates need the size of every texture, so the textures of the level are loaded here. A missing
+        // texture gets the checkerboard fallback of the store (and a warning in the log), with the size of the fallback.
+        const TextureSizeLookup getTextureSize = [&assets](const std::string& textureName)
+        {
+            const Renderer::GLTexture& texture = assets.textures.Get(assets.textures.Load(MakeTexturePath(textureName)));
+            return glm::ivec2(texture.GetWidth(), texture.GetHeight());
+        };
+        LevelMesh levelMesh = BuildLevelMesh(*world, getTextureSize);
         level.statistics = levelMesh.statistics;
 
-        // The level has no textures yet (they come in the next branch), so it is drawn by the solid shaded program,
-        // which does not read a texture: the texture handle stays empty.
+        // Until the level is drawn grouped by texture (the next step), it is drawn by the solid shaded program, which does
+        // not read a texture: the texture handle stays empty.
         level.geometry = registry.create();
         registry.emplace<Core::Name>(level.geometry, "World geometry");
         registry.emplace<Core::Transform>(level.geometry);

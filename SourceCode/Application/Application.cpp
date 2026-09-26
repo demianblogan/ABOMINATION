@@ -154,6 +154,14 @@ namespace Abomination
         if (m_actionStates.WasActionStarted(Input::Action::Quit))
             m_window.RequestClose();
 
+        // Alt+Enter, like in most Windows games: windowed <-> borderless. Exclusive fullscreen is chosen only in the menu, so
+        // from it the shortcut goes to windowed.
+        if (m_actionStates.WasActionStarted(Input::Action::ToggleScreenMode))
+        {
+            const bool isWindowed = m_window.GetScreenMode() == Platform::ScreenMode::Windowed;
+            m_window.SetScreenMode(isWindowed ? Platform::ScreenMode::Borderless : Platform::ScreenMode::Windowed);
+        }
+
         if (m_actionStates.WasActionStarted(Input::Action::ToggleDebugOverlay))
             m_debugOverlay.ToggleVisibility();
 

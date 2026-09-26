@@ -18,6 +18,12 @@ namespace Abomination::Input
             if (const Key* key = std::get_if<Key>(&binding); key != nullptr)
                 return devices.keyboard.IsKeyHeld(*key) || devices.keyboard.WasKeyPressed(*key);
 
+            // The modifier only has to be held; the key starts the action. Holding Alt and then pressing Enter works, and so
+            // does pressing both in the same frame (a press also marks the key as held).
+            if (const KeyCombination* combination = std::get_if<KeyCombination>(&binding); combination != nullptr)
+                return devices.keyboard.IsKeyHeld(combination->modifier) &&
+                       (devices.keyboard.IsKeyHeld(combination->key) || devices.keyboard.WasKeyPressed(combination->key));
+
             const MouseButton button = std::get<MouseButton>(binding);
             return devices.mouse.IsButtonHeld(button) || devices.mouse.WasButtonPressed(button);
         }

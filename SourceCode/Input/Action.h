@@ -26,6 +26,9 @@ namespace Abomination::Input
         // Closes the game. Escape for now; from 0.8 Escape opens the pause menu, and quitting moves to a button there.
         Quit,
 
+        // Switches between windowed and borderless (from exclusive fullscreen: to windowed).
+        ToggleScreenMode,
+
         // Developer tools
         ToggleDebugOverlay,
 

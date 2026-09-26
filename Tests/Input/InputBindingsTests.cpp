@@ -38,7 +38,7 @@ namespace Abomination::Input
         EXPECT_EQ(bindings.GetBindings(Action::MoveBackward).size(), 1u);
     }
 
-    TEST(InputBindings, DefaultBindingsUseWASDF1AndEscape)
+    TEST(InputBindings, DefaultBindingsUseWASDF1EscapeAndAltEnter)
     {
         const InputBindings bindings = InputBindings::CreateDefault();
 
@@ -48,5 +48,6 @@ namespace Abomination::Input
         EXPECT_EQ(bindings.GetBindings(Action::LookAroundMode)[0], InputBinding(MouseButton::Right));
         EXPECT_EQ(bindings.GetBindings(Action::ToggleDebugOverlay)[0], InputBinding(Key::F1));
         EXPECT_EQ(bindings.GetBindings(Action::Quit)[0], InputBinding(Key::Escape));
+        EXPECT_EQ(bindings.GetBindings(Action::ToggleScreenMode)[0], InputBinding(KeyCombination{Key::LeftAlt, Key::Enter}));
     }
 }

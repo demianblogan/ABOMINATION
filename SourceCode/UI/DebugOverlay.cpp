@@ -236,6 +236,24 @@ namespace Abomination::UI
         {
             if (ImGui::BeginMenu("Display"))
             {
+                // One item per mode, the current one checked, like the FPS limits below. The tooltip is set right after
+                // BeginMenu(), so it belongs to the "Screen mode" item whether the submenu is open or not.
+                const bool isScreenModeMenuOpen = ImGui::BeginMenu("Screen mode");
+                ImGui::SetItemTooltip("Alt+Enter switches between Windowed and Borderless.");
+                if (isScreenModeMenuOpen)
+                {
+                    for (std::size_t index = 0; index < Platform::ScreenModeNames.size(); ++index)
+                    {
+                        const auto mode = static_cast<Platform::ScreenMode>(index);
+                        const bool isCurrentMode = context.window.GetScreenMode() == mode;
+                        // data() is safe here: the names are string literals, which end with a zero like ImGui expects.
+                        if (ImGui::MenuItem(Platform::ScreenModeNames[index].data(), nullptr, isCurrentMode) && !isCurrentMode)
+                            context.window.SetScreenMode(mode);
+                    }
+
+                    ImGui::EndMenu();
+                }
+
                 // Here MenuItem(label, shortcut, bool) only shows the check mark and returns true when clicked,
                 // because the state belongs to the window, not to the overlay.
                 const bool isVSyncEnabled = context.window.IsVSyncEnabled();

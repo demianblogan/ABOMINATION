@@ -3,6 +3,7 @@
 #include "Core/BuildConfiguration.h"
 #include "Core/Log.h"
 #include "Input/InputDevices.h"
+#include "Platform/WindowSizing.h"
 
 #include <SDL3/SDL.h>
 #include <imgui.h>
@@ -63,6 +64,9 @@ namespace Abomination::Platform
         {
             return displayScale > 0.0f ? displayScale : 1.0f;
         }
+
+        // The size of the window if the usable area of the monitor cannot be read: 16:9 and small enough for any monitor.
+        constexpr WindowSize FallbackWindowSize{.width = 1280, .height = 720};
     }
 
     std::expected<Window, std::string> Window::Create(const WindowSettings& settings)
@@ -71,18 +75,45 @@ namespace Abomination::Platform
 
         // SDL_WINDOW_HIGH_PIXEL_DENSITY asks for a back buffer with the real pixels of the screen. Without it, on systems
         // that scale windows themselves the game would be drawn at a lower resolution and stretched (blurry).
-        SDL_WindowFlags flags = SDL_WINDOW_OPENGL | SDL_WINDOW_HIGH_PIXEL_DENSITY;
+        // SDL_WINDOW_HIDDEN: the window is shown only after its screen mode is set, so it does not flash as a small window
+        // before covering the screen.
+        SDL_WindowFlags flags = SDL_WINDOW_OPENGL | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_HIDDEN;
         if (settings.isResizable)
             flags |= SDL_WINDOW_RESIZABLE;
 
-        // The requested size is meant at 100%. On a 4K monitor with a display scale of 200% the pixels are twice as small,
-        // so the window is made twice as big in pixels to look the same size on the screen. The window does not exist
-        // yet, so the scale of the primary display is used.
-        const float initialScale = MakeValidDisplayScale(SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay()));
-        const int width = static_cast<int>(static_cast<float>(settings.width) * initialScale);
-        const int height = static_cast<int>(static_cast<float>(settings.height) * initialScale);
+        // The window is sized from the monitor it opens on, the primary one (the window does not exist yet, so it cannot be
+        // asked which monitor it is on). The usable area is the screen without the taskbar, in screen coordinates: the
+        // units of window sizes too, so the size already fits any resolution and display scale.
+        SDL_Rect usableArea{};
+        WindowSize size;
+        if (SDL_GetDisplayUsableBounds(SDL_GetPrimaryDisplay(), &usableArea))
+            size = CalculateWindowedSize({.width = usableArea.w, .height = usableArea.h});
 
-        SDL_Window* window = SDL_CreateWindow(settings.title.c_str(), width, height, flags);
+        if (size.width <= 0 || size.height <= 0)
+        {
+            Core::Log::Write(LogCategory::Platform, LogLevel::Warning,
+                             "Could not read the usable area of the primary display ({}), the window gets a default size",
+                             SDL_GetError());
+            usableArea = {.x = 0, .y = 0, .w = 0, .h = 0};
+            size = FallbackWindowSize;
+        }
+
+        // SDL_CreateWindow cannot place the window, so the window is described by properties: a dictionary of named
+        // values SDL reads while creating it. The window is centered in the usable area (with the fallback size, where
+        // the usable area is unknown, the operating system centers it on the primary display).
+        const bool isUsableAreaKnown = usableArea.w > 0;
+        const SDL_PropertiesID properties = SDL_CreateProperties();
+        SDL_SetStringProperty(properties, SDL_PROP_WINDOW_CREATE_TITLE_STRING, settings.title.c_str());
+        SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, size.width);
+        SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, size.height);
+        SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_X_NUMBER,
+                              isUsableAreaKnown ? usableArea.x + (usableArea.w - size.width) / 2 : SDL_WINDOWPOS_CENTERED);
+        SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_Y_NUMBER,
+                              isUsableAreaKnown ? usableArea.y + (usableArea.h - size.height) / 2 : SDL_WINDOWPOS_CENTERED);
+        SDL_SetNumberProperty(properties, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, flags);
+
+        SDL_Window* window = SDL_CreateWindowWithProperties(properties);
+        SDL_DestroyProperties(properties); // SDL has read the values, the dictionary is not needed any more
         if (window == nullptr)
             return std::unexpected(std::format("Failed to create the window: {}", SDL_GetError()));
 
@@ -95,18 +126,23 @@ namespace Abomination::Platform
             return std::unexpected(std::format("Failed to create an OpenGL 4.6 Core context: {}", SDL_GetError()));
         }
 
-        // The size in pixels can differ from the requested size, for example when Windows scales the desktop.
-        int widthInPixels = 0;
-        int heightInPixels = 0;
-        SDL_GetWindowSizeInPixels(window, &widthInPixels, &heightInPixels);
-
-        const float displayScale = MakeValidDisplayScale(SDL_GetWindowDisplayScale(window));
-        Core::Log::Write(LogCategory::Platform, LogLevel::Info, "Window created: {}x{} pixels, display scale {:.0f}%",
-                         widthInPixels, heightInPixels, displayScale * 100.0f);
-
-        Window result(window, context, widthInPixels, heightInPixels);
-        result.m_displayScale = displayScale;
+        Window result(window, context, 0, 0);
         result.SetVSyncEnabled(settings.isVSyncEnabled);
+
+        // The windowed size set above stays the size the window returns to when it leaves fullscreen.
+        result.SetScreenMode(settings.screenMode);
+        SDL_ShowWindow(window);
+
+        // Showing the window and changing its mode are finished by the operating system a moment later. SDL_SyncWindow
+        // waits until they are done, so the size read below is the final one and not the hidden windowed size.
+        SDL_SyncWindow(window);
+
+        // The size in pixels can differ from the requested size, for example when Windows scales the desktop.
+        SDL_GetWindowSizeInPixels(window, &result.m_widthInPixels, &result.m_heightInPixels);
+        result.m_displayScale = MakeValidDisplayScale(SDL_GetWindowDisplayScale(window));
+        Core::Log::Write(LogCategory::Platform, LogLevel::Info, "Window created: {}x{} pixels, display scale {:.0f}%, {}",
+                         result.m_widthInPixels, result.m_heightInPixels, result.m_displayScale * 100.0f,
+                         GetScreenModeName(result.m_screenMode));
 
         return result;
     }
@@ -123,6 +159,7 @@ namespace Abomination::Platform
         , m_context(std::exchange(other.m_context, nullptr))
         , m_isCloseRequested(other.m_isCloseRequested)
         , m_isVSyncEnabled(other.m_isVSyncEnabled)
+        , m_screenMode(other.m_screenMode)
         , m_widthInPixels(other.m_widthInPixels)
         , m_heightInPixels(other.m_heightInPixels)
         , m_displayScale(other.m_displayScale)
@@ -137,6 +174,7 @@ namespace Abomination::Platform
             m_context = std::exchange(other.m_context, nullptr);
             m_isCloseRequested = other.m_isCloseRequested;
             m_isVSyncEnabled = other.m_isVSyncEnabled;
+            m_screenMode = other.m_screenMode;
             m_widthInPixels = other.m_widthInPixels;
             m_heightInPixels = other.m_heightInPixels;
             m_displayScale = other.m_displayScale;
@@ -266,6 +304,54 @@ namespace Abomination::Platform
     bool Window::IsVSyncEnabled() const noexcept
     {
         return m_isVSyncEnabled;
+    }
+
+    void Window::SetScreenMode(ScreenMode mode)
+    {
+        // SDL has one "fullscreen" switch and a separate choice of what fullscreen means: the display mode (resolution and
+        // refresh rate) to switch the monitor to. No display mode (nullptr) means borderless fullscreen at the desktop
+        // resolution; a display mode means exclusive fullscreen in that mode.
+        bool isSuccessful = true;
+        switch (mode)
+        {
+            case ScreenMode::Windowed:
+                isSuccessful = SDL_SetWindowFullscreen(m_window, false);
+                break;
+
+            case ScreenMode::Borderless:
+                isSuccessful = SDL_SetWindowFullscreenMode(m_window, nullptr) && SDL_SetWindowFullscreen(m_window, true);
+                break;
+
+            case ScreenMode::Fullscreen:
+            {
+                // The mode the desktop of the window's monitor uses now: its native resolution in almost every case.
+                const SDL_DisplayMode* desktopMode = SDL_GetDesktopDisplayMode(SDL_GetDisplayForWindow(m_window));
+                isSuccessful = desktopMode != nullptr && SDL_SetWindowFullscreenMode(m_window, desktopMode) &&
+                               SDL_SetWindowFullscreen(m_window, true);
+                break;
+            }
+        }
+
+        if (!isSuccessful)
+        {
+            Core::Log::Write(LogCategory::Platform, LogLevel::Error, "Could not switch the window to {}: {}",
+                             GetScreenModeName(mode), SDL_GetError());
+
+            return;
+        }
+
+        m_screenMode = mode;
+        Core::Log::Write(LogCategory::Platform, LogLevel::Info, "Screen mode: {}", GetScreenModeName(mode));
+    }
+
+    ScreenMode Window::GetScreenMode() const noexcept
+    {
+        return m_screenMode;
+    }
+
+    void Window::RequestClose() noexcept
+    {
+        m_isCloseRequested = true;
     }
 
     bool Window::IsCloseRequested() const noexcept

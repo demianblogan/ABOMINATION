@@ -115,7 +115,7 @@ A module may depend only on modules **below** it in this diagram.
 |---------------|-----------------------------------------------------------------|---------|
 | `Core`        | Time (clock, frame timer, fixed timestep, FPS limit), frame statistics, logging, files, image decoding, asset handles and cache, `Transform`, `Name`, transform interpolation, planes and convex polygon clipping | 0.1 |
 | `Input`       | Keyboard and mouse state, actions and bindings (see section 7)  | 0.1     |
-| `Platform`    | SDL3 window, OpenGL context creation, OS events → `Input`       | 0.1     |
+| `Platform`    | SDL3 window (size from the monitor, screen modes), OpenGL context creation, OS events → `Input` | 0.1     |
 | `Renderer`    | Everything OpenGL. Exposes a high-level API (see section 6)     | 0.1     |
 | `Config`      | Loading JSON data and settings                                  | Planned |
 | `World`       | `.map` parsing, brush geometry, level loading and spawning (see section 11); level compiler later | 0.2 |
@@ -155,7 +155,7 @@ A module may depend only on modules **below** it in this diagram.
   debug windows (now *Performance*, *Assets*, *Entities* and *Renderer*; all
   closed at the first start), *Settings*
   changes settings grouped like the future options menu (now *Display*:
-  V-Sync, FPS limit, UI scale). The font size is one constant next to the font
+  screen mode, V-Sync, FPS limit, UI scale). The font size is one constant next to the font
   file name in `DebugOverlay.cpp`. `Draw()` takes one `UI::DebugOverlayContext`
   with references to the systems the overlay shows and changes; a new debug
   tool adds a field to it instead of a new parameter. The references are valid
@@ -175,15 +175,30 @@ A module may depend only on modules **below** it in this diagram.
   `UI::ScaleToUI`. The debug overlay does not grow with the size of the game
   window, like editor panels; the game HUD (0.4) will scale with the screen
   height instead.
+- **Window size and screen modes.** No window size is written in the code.
+  In windowed mode the window is the largest 16:9 rectangle that fits into
+  75% of the usable area of the monitor (the screen without the taskbar),
+  centered in it; `Platform::CalculateWindowedSize` (`WindowSizing.h`, no SDL,
+  unit-tested) does the math. The usable area and window sizes are both in
+  screen coordinates, so the result fits any resolution and display scale.
+  `Platform::ScreenMode` is *Windowed*, *Borderless* (a frameless window over
+  the whole monitor at the desktop resolution, the default) or *Fullscreen*
+  (exclusive, at the desktop resolution until the options menu, 0.8).
+  `Window::SetScreenMode` switches between them; SDL remembers the windowed
+  size and position, so leaving fullscreen restores them. The mode is chosen
+  in *Settings > Display > Screen mode*, or with Alt+Enter (windowed ↔
+  borderless), and is not saved between runs until the Config module (0.8).
 
 **Startup order** (`Main.cpp` → `Application::Create`)
 
 1. Logging starts; the log file is written next to the executable.
 2. `Platform::SDLLibrary` initializes SDL.
 3. `Platform::Window` creates the window and the OpenGL 4.6 Core context
-   (a debug context in Debug builds). The requested size is meant at 100% and
-   is multiplied by the display scale of the primary monitor, so the window
-   looks the same size on a 4K monitor at 200%.
+   (a debug context in Debug builds). The window is created hidden at its
+   windowed size (from the primary monitor), switched to its screen mode
+   (borderless by default) and only then shown, so it does not flash as a
+   small window first; `SDL_SyncWindow` waits until the mode is applied, so
+   the first size in pixels is the final one.
 4. `Renderer::LoadOpenGLFunctions` loads the OpenGL functions through GLAD and
    checks that 4.6 is available.
 5. In Debug builds `Renderer::EnableDebugOutput` routes driver messages to the
@@ -374,7 +389,8 @@ OS → [Platform] SDL events
           Mouse: movement, wheel, buttons
           ▼
      [Input] ActionStates: actions calculated through InputBindings
-          MoveForward ← W, LookAroundMode ← right mouse button, ToggleDebugOverlay ← F1
+          MoveForward ← W, LookAroundMode ← right mouse button, ToggleDebugOverlay ← F1,
+          Quit ← Escape, ToggleScreenMode ← Alt+Enter (left or right Alt)
           active / started this frame / stopped this frame
           ▼
      Code asks for actions, never for keys:
@@ -391,6 +407,9 @@ OS → [Platform] SDL events
   **active**, **started**, **stopped**, found by comparing with the previous
   frame, so a second binding of an active action does not start it again and
   a tap shorter than a frame is not lost.
+- A binding is a key, a mouse button or a **key combination**
+  (`KeyCombination`: a modifier that must be held plus a key, like Alt+Enter);
+  `InputBinding` is a `std::variant` of the three.
 - The code **polls** the state once per frame instead of reacting to
   callbacks, so input is handled at one predictable point of the frame.
 - Key repeats from the OS are ignored; all keys and buttons are released when
@@ -399,8 +418,11 @@ OS → [Platform] SDL events
   gamepad support possible without changing gameplay code.
 - Mouse movement is not an action: it is an amount per frame, read directly
   (it will become an analog "look" input together with the gamepad sticks).
-- **Application actions** (overlay, later pause and screenshots) are handled
-  by `Application`; **gameplay actions** (movement, later firing) by gameplay
+- **Application actions** (overlay, quitting, screen mode; later pause and
+  screenshots) are handled by `Application`; quitting asks the window to close
+  (`Window::RequestClose`, the same path as its close button), so the frame
+  ends normally and everything shuts down in order. Escape quits until the
+  pause menu (0.8) takes it over; **gameplay actions** (movement, later firing) by gameplay
   controllers and systems.
 
 **Ownership:** `Application` owns `Input::InputDevices`, `Input::InputBindings`

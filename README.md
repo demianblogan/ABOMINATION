@@ -126,7 +126,7 @@ Full instructions, including the command line: **[BUILDING.md](Documentation/BUI
 
 ## 🎮 Controls
 
-The current build (milestone 0.1) has a free-fly camera around a test cube.
+The current build (milestone 0.2 in progress) has a free-fly camera in a test level made in TrenchBroom.
 
 | Input | Action |
 |:-----:|--------|
@@ -135,6 +135,8 @@ The current build (milestone 0.1) has a free-fly camera around a test cube.
 | <kbd>Shift</kbd> | Fly faster |
 | Hold **right mouse button** | Look around with the mouse |
 | <kbd>F1</kbd> | Show / hide the debug overlay |
+| <kbd>Alt</kbd> + <kbd>Enter</kbd> | Switch between windowed and borderless |
+| <kbd>Esc</kbd> | Quit the game |
 
 ## 🗺️ Roadmap
 

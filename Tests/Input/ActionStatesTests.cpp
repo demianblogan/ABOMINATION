@@ -103,4 +103,38 @@ namespace Abomination::Input
 
         EXPECT_TRUE(m_actions.WasActionStopped(Action::ToggleDebugOverlay));
     }
+
+    TEST_F(ActionStatesTest, KeyCombinationStartsActionWhenKeyIsPressedWithModifierHeld)
+    {
+        StartFrame();
+        m_devices.keyboard.PressKey(Key::LeftAlt);
+        UpdateActions();
+
+        EXPECT_FALSE(m_actions.IsActionActive(Action::ToggleScreenMode)); // the modifier alone does nothing
+
+        StartFrame();
+        m_devices.keyboard.PressKey(Key::Enter);
+        UpdateActions();
+
+        EXPECT_TRUE(m_actions.WasActionStarted(Action::ToggleScreenMode));
+    }
+
+    TEST_F(ActionStatesTest, KeyCombinationWorksWhenBothKeysArePressedInOneFrame)
+    {
+        StartFrame();
+        m_devices.keyboard.PressKey(Key::RightAlt);
+        m_devices.keyboard.PressKey(Key::Enter);
+        UpdateActions();
+
+        EXPECT_TRUE(m_actions.WasActionStarted(Action::ToggleScreenMode));
+    }
+
+    TEST_F(ActionStatesTest, KeyOfCombinationAloneDoesNothing)
+    {
+        StartFrame();
+        m_devices.keyboard.PressKey(Key::Enter);
+        UpdateActions();
+
+        EXPECT_FALSE(m_actions.IsActionActive(Action::ToggleScreenMode));
+    }
 }

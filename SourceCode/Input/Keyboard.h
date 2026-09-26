@@ -22,11 +22,17 @@ namespace Abomination::Input
         S = 22,
         W = 26,
 
+        // Control keys
+        Enter = 40,
+        Escape = 41,
+
         // Function keys
         F1 = 58,
 
         // Modifiers
         LeftShift = 225,
+        LeftAlt = 226,
+        RightAlt = 230,
     };
 
     // Number of possible scancodes. Must match SDL_SCANCODE_COUNT; Platform/Window.cpp checks this with a static_assert.

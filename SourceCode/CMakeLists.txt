@@ -68,12 +68,15 @@ set(LIBRARY_SOURCES
 
     Platform/ImGuiPlatformBackend.h
     Platform/ImGuiPlatformBackend.cpp
+    Platform/ScreenMode.h
     Platform/SDLLibrary.h
     Platform/SDLLibrary.cpp
     Platform/SystemServices.h
     Platform/SystemServices.cpp
     Platform/Window.h
     Platform/Window.cpp
+    Platform/WindowSizing.h
+    Platform/WindowSizing.cpp
 
     Renderer/CameraLens.h
     Renderer/DebugOutput.h

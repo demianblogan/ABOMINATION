@@ -149,7 +149,19 @@ namespace Abomination
 
     void Application::Update()
     {
-        // An action of the application itself (not of the game), so it is handled here.
+        // Actions of the application itself (not of the game), so they are handled here. Quitting only asks the window to
+        // close: the frame is finished as usual and the main loop ends before the next one.
+        if (m_actionStates.WasActionStarted(Input::Action::Quit))
+            m_window.RequestClose();
+
+        // Alt+Enter, like in most Windows games: windowed <-> borderless. Exclusive fullscreen is chosen only in the menu, so
+        // from it the shortcut goes to windowed.
+        if (m_actionStates.WasActionStarted(Input::Action::ToggleScreenMode))
+        {
+            const bool isWindowed = m_window.GetScreenMode() == Platform::ScreenMode::Windowed;
+            m_window.SetScreenMode(isWindowed ? Platform::ScreenMode::Borderless : Platform::ScreenMode::Windowed);
+        }
+
         if (m_actionStates.WasActionStarted(Input::Action::ToggleDebugOverlay))
             m_debugOverlay.ToggleVisibility();
 

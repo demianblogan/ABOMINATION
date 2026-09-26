@@ -35,11 +35,17 @@ set(LIBRARY_SOURCES
     Core/Image.cpp
     Core/Log.h
     Core/Log.cpp
+    Core/Transform.h
+    Core/Transform.cpp
     Core/Version.h
     Core/Version.cpp.in
 
     Gameplay/FreeFlyCameraController.h
+    Gameplay/DemoLevel.h
+    Gameplay/DemoLevel.cpp
     Gameplay/FreeFlyCameraController.cpp
+    Gameplay/Spin.h
+    Gameplay/Spin.cpp
 
     Input/Action.h
     Input/ActionStates.h
@@ -65,8 +71,6 @@ set(LIBRARY_SOURCES
     Renderer/Camera.cpp
     Renderer/DebugOutput.h
     Renderer/DebugOutput.cpp
-    Renderer/DemoScene.h
-    Renderer/DemoScene.cpp
     Renderer/GLBuffer.h
     Renderer/GLBuffer.cpp
     Renderer/GLShaderProgram.h
@@ -82,6 +86,7 @@ set(LIBRARY_SOURCES
     Renderer/MeshData.h
     Renderer/MeshPrimitives.h
     Renderer/MeshPrimitives.cpp
+    Renderer/MeshRenderer.h
     Renderer/MeshStore.h
     Renderer/MeshStore.cpp
     Renderer/OpenGLLoader.h
@@ -89,6 +94,8 @@ set(LIBRARY_SOURCES
     Renderer/RenderAssets.h
     Renderer/RenderCommands.h
     Renderer/RenderCommands.cpp
+    Renderer/RenderSystem.h
+    Renderer/RenderSystem.cpp
     Renderer/ShaderStore.h
     Renderer/ShaderStore.cpp
     Renderer/TextureStore.h

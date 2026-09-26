@@ -4,10 +4,13 @@
 #include "Core/FrameStatistics.h"
 #include "Core/FrameTimer.h"
 #include "Core/Log.h"
+#include "Gameplay/DemoLevel.h"
+#include "Gameplay/Spin.h"
 #include "Platform/SystemServices.h"
 #include "Renderer/DebugOutput.h"
 #include "Renderer/OpenGLLoader.h"
 #include "Renderer/RenderCommands.h"
+#include "Renderer/RenderSystem.h"
 
 #include <glm/common.hpp>
 #include <glm/vec3.hpp>
@@ -25,8 +28,9 @@ namespace Abomination
         // A neutral dark gray, so the colors of the scene are easy to judge.
         constexpr glm::vec4 BackgroundColor{0.12f, 0.12f, 0.13f, 1.0f};
 
-        // The camera starts 2.5 meters in front of the cube (the cube is at the origin, the camera looks along -Z).
-        constexpr glm::vec3 InitialCameraPosition{0.0f, 0.0f, 2.5f};
+        // The camera starts 6 meters in front of the crates and a little above them (the crates are around the origin,
+        // the camera looks along -Z).
+        constexpr glm::vec3 InitialCameraPosition{0.0f, 1.0f, 6.0f};
     }
 
     std::expected<Application, std::string> Application::Create(const std::filesystem::path& assetsDirectory)
@@ -57,28 +61,29 @@ namespace Abomination
             .meshes = Renderer::MeshStore(),
         };
 
-        Renderer::DemoScene demoScene = Renderer::DemoScene::Create(renderAssets);
-
         // The overlay reads its font from the assets and keeps its window settings next to the executable, like the log.
         std::expected<UI::DebugOverlay, std::string> debugOverlay =
             UI::DebugOverlay::Create(*window, assetsDirectory, Platform::GetExecutableDirectory());
         if (!debugOverlay.has_value())
             return std::unexpected(debugOverlay.error());
 
-        return Application(std::move(*SDLLibrary), std::move(*window), std::move(renderAssets), std::move(demoScene),
+        return Application(std::move(*SDLLibrary), std::move(*window), std::move(renderAssets),
                            std::move(*debugOverlay));
     }
 
     Application::Application(Platform::SDLLibrary SDLLibrary, Platform::Window window, Renderer::RenderAssets renderAssets,
-                             Renderer::DemoScene demoScene, UI::DebugOverlay debugOverlay) noexcept
+                             UI::DebugOverlay debugOverlay) noexcept
         : m_SDLLibrary(std::move(SDLLibrary))
         , m_window(std::move(window))
         , m_renderAssets(std::move(renderAssets))
-        , m_demoScene(std::move(demoScene))
         , m_debugOverlay(std::move(debugOverlay))
     {
         m_camera.SetPosition(InitialCameraPosition);
         m_previousCameraPosition = InitialCameraPosition;
+
+        // Entities are created here, not in Create(): the registry is a member, and the handles the components get from
+        // m_renderAssets stay valid because they are numbers, not pointers.
+        Gameplay::SpawnDemoLevel(m_registry, m_renderAssets);
     }
 
     int Application::Run()
@@ -112,7 +117,7 @@ namespace Abomination
             frameStatistics.AddFrame(frameTimer.GetDeltaTime(), tickCount);
 
             // 4. Drawing and showing the frame.
-            Render(frameTimer.GetTotalTime(), frameStatistics);
+            Render(frameStatistics);
 
             // 5. With an FPS limit, the frame waits here until it has lasted 1 / limit seconds. The next frame then
             //    starts right on time, and its measured delta time includes this wait.
@@ -150,14 +155,24 @@ namespace Abomination
         // Remembered before the camera moves, so a frame can be drawn anywhere between this position and the new one.
         m_previousCameraPosition = m_camera.GetPosition();
         m_cameraController.UpdateMovement(m_camera, m_actionStates, tickDuration);
+
+        Gameplay::UpdateSpinningEntities(m_registry, tickDuration);
     }
 
-    void Application::Render(double totalTime, const Core::FrameStatistics& frameStatistics)
+    void Application::Render(const Core::FrameStatistics& frameStatistics)
     {
-        Renderer::SetViewport(m_window.GetWidthInPixels(), m_window.GetHeightInPixels());
+        const int widthInPixels = m_window.GetWidthInPixels();
+        const int heightInPixels = m_window.GetHeightInPixels();
+
+        Renderer::SetViewport(widthInPixels, heightInPixels);
         Renderer::ClearFrame(BackgroundColor);
-        m_demoScene.Draw(totalTime, GetInterpolatedCamera(), m_window.GetWidthInPixels(), m_window.GetHeightInPixels(),
-                         m_renderAssets);
+
+        // A minimized window has a height of 0: there is nothing to draw, and the aspect ratio would divide by zero.
+        if (widthInPixels > 0 && heightInPixels > 0)
+        {
+            const float aspectRatio = static_cast<float>(widthInPixels) / static_cast<float>(heightInPixels);
+            Renderer::DrawMeshes(m_registry, GetInterpolatedCamera(), aspectRatio, m_renderAssets);
+        }
 
         // The overlay is drawn last, on top of the game.
         m_debugOverlay.Draw({

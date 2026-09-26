@@ -11,9 +11,11 @@ set(TEST_SOURCES
     Core/FrameTimerTests.cpp
     Core/ImageTests.cpp
     Core/LogTests.cpp
+    Core/TransformTests.cpp
     Core/VersionTests.cpp
 
     Gameplay/FreeFlyCameraControllerTests.cpp
+    Gameplay/SpinTests.cpp
 
     Input/ActionStatesTests.cpp
     Input/InputBindingsTests.cpp

@@ -9,10 +9,10 @@
 #include "Platform/SDLLibrary.h"
 #include "Platform/Window.h"
 #include "Renderer/Camera.h"
-#include "Renderer/DemoScene.h"
 #include "Renderer/RenderAssets.h"
 #include "UI/DebugOverlay.h"
 
+#include <entt/entt.hpp>
 #include <glm/vec3.hpp>
 
 #include <expected>
@@ -40,7 +40,7 @@ namespace Abomination
 
     private:
         Application(Platform::SDLLibrary SDLLibrary, Platform::Window window, Renderer::RenderAssets renderAssets,
-                    Renderer::DemoScene demoScene, UI::DebugOverlay debugOverlay) noexcept;
+                    UI::DebugOverlay debugOverlay) noexcept;
 
         // The two kinds of updates of the main loop, named like in Unity:
         //   Update()      - once per frame: what must react immediately and does not depend on time
@@ -52,20 +52,23 @@ namespace Abomination
         void FixedUpdate(float tickDuration);
 
         // Draws the frame (the game, then the debug overlay on top) and shows it on the screen.
-        // totalTime: seconds since the start, for animations; frameStatistics: the numbers for the overlay.
-        void Render(double totalTime, const Core::FrameStatistics& frameStatistics);
+        // frameStatistics: the numbers for the overlay.
+        void Render(const Core::FrameStatistics& frameStatistics);
 
         // The camera the frame is drawn through: m_camera with its position interpolated between the last two ticks.
         [[nodiscard]] Renderer::Camera GetInterpolatedCamera() const;
 
-        // Members are destroyed in reverse order of declaration: the overlay, the scene and the assets first (they use
-        // OpenGL), then the window, then SDL, which the window needs.
+        // Members are destroyed in reverse order of declaration: the overlay and the assets first (they use OpenGL),
+        // then the window, then SDL, which the window needs.
         Platform::SDLLibrary m_SDLLibrary;
         Platform::Window m_window;
 
-        // Every graphics asset of the game, loaded once. Declared before the scene, which keeps handles to them.
+        // Every graphics asset of the game, loaded once.
         Renderer::RenderAssets m_renderAssets;
-        Renderer::DemoScene m_demoScene;
+
+        // All entities of the game and their components. Components hold only handles to assets, never pointers, so they
+        // stay valid when Application (and with it m_renderAssets) is moved out of Create().
+        entt::registry m_registry;
 
         // The camera the scene is drawn through, and the controller that flies it.
         // m_previousCameraPosition is the position before the last tick, needed for interpolation.

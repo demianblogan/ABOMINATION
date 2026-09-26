@@ -17,8 +17,9 @@ namespace Abomination::Platform
     struct WindowSettings
     {
         std::string title = "Abomination";
-        int width = 1280;
-        int height = 720;
+
+        // There is no size here: the window takes its size from the monitor (see CalculateWindowedSize in WindowSizing.h).
+
         bool isResizable = true;
 
         // V-Sync: SwapBuffers() waits for the monitor refresh. No tearing, and the frame rate never exceeds the refresh rate.

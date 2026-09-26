@@ -25,6 +25,8 @@ set(TEST_SOURCES
     Input/KeyboardTests.cpp
     Input/MouseTests.cpp
 
+    Platform/WindowSizingTests.cpp
+
     Renderer/GLTextureTests.cpp
     Renderer/MeshPrimitivesTests.cpp
     Renderer/ViewTests.cpp

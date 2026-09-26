@@ -74,6 +74,8 @@ set(LIBRARY_SOURCES
     Platform/SystemServices.cpp
     Platform/Window.h
     Platform/Window.cpp
+    Platform/WindowSizing.h
+    Platform/WindowSizing.cpp
 
     Renderer/CameraLens.h
     Renderer/DebugOutput.h

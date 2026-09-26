@@ -28,6 +28,8 @@ set(TEST_SOURCES
     Renderer/ViewTests.cpp
 
     ThirdParty/EnTTTests.cpp
+
+    World/MapParserTests.cpp
 )
 
 add_executable(AbominationTests

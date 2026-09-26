@@ -114,6 +114,11 @@ set(LIBRARY_SOURCES
     UI/ImGuiLibrary.cpp
     UI/UIScale.h
     UI/UIScale.cpp
+
+    World/MapData.h
+    World/MapData.cpp
+    World/MapParser.h
+    World/MapParser.cpp
 )
 
 add_library(AbominationCore STATIC

@@ -353,6 +353,44 @@ namespace Abomination::UI
                 }
             }
 
+            std::size_t totalMeshMemory = 0;
+            assets.meshes.VisitMeshes([&](const std::string&, const Renderer::Mesh& mesh)
+            {
+                totalMeshMemory += mesh.GetVideoMemorySize();
+            });
+
+            const std::string meshesHeader = std::format("Meshes: {}, {} of video memory###Meshes", assets.meshes.GetCount(),
+                                                         FormatByteSize(totalMeshMemory));
+            if (ImGui::CollapsingHeader(meshesHeader.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                if (ImGui::BeginTable("MeshTable", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders))
+                {
+                    ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch);
+                    ImGui::TableSetupColumn("Vertices", ImGuiTableColumnFlags_WidthFixed);
+                    ImGui::TableSetupColumn("Triangles", ImGuiTableColumnFlags_WidthFixed);
+                    ImGui::TableSetupColumn("Video memory", ImGuiTableColumnFlags_WidthFixed);
+                    ImGui::TableHeadersRow();
+
+                    assets.meshes.VisitMeshes([](const std::string& name, const Renderer::Mesh& mesh)
+                    {
+                        ImGui::TableNextColumn();
+                        ImGui::TextUnformatted(name.c_str());
+
+                        ImGui::TableNextColumn();
+                        ImGui::TextUnformatted(std::format("{}", mesh.GetVertexCount()).c_str());
+
+                        // Every 3 indices are one triangle.
+                        ImGui::TableNextColumn();
+                        ImGui::TextUnformatted(std::format("{}", mesh.GetIndexCount() / 3).c_str());
+
+                        ImGui::TableNextColumn();
+                        ImGui::TextUnformatted(FormatByteSize(mesh.GetVideoMemorySize()).c_str());
+                    });
+
+                    ImGui::EndTable();
+                }
+            }
+
             const std::string programsHeader = std::format("Shader programs: {}###ShaderPrograms", assets.shaders.GetCount());
             if (ImGui::CollapsingHeader(programsHeader.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
             {

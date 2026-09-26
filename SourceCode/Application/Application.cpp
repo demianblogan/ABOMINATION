@@ -54,6 +54,7 @@ namespace Abomination
         Renderer::RenderAssets renderAssets{
             .textures = Renderer::TextureStore(assetsDirectory),
             .shaders = std::move(*shaders),
+            .meshes = Renderer::MeshStore(),
         };
 
         Renderer::DemoScene demoScene = Renderer::DemoScene::Create(renderAssets);

@@ -77,6 +77,13 @@ set(LIBRARY_SOURCES
     Renderer/GLVertexArray.cpp
     Renderer/ImGuiRendererBackend.h
     Renderer/ImGuiRendererBackend.cpp
+    Renderer/Mesh.h
+    Renderer/Mesh.cpp
+    Renderer/MeshData.h
+    Renderer/MeshPrimitives.h
+    Renderer/MeshPrimitives.cpp
+    Renderer/MeshStore.h
+    Renderer/MeshStore.cpp
     Renderer/OpenGLLoader.h
     Renderer/OpenGLLoader.cpp
     Renderer/RenderAssets.h

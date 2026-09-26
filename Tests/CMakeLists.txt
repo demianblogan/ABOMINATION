@@ -22,6 +22,7 @@ set(TEST_SOURCES
 
     Renderer/CameraTests.cpp
     Renderer/GLTextureTests.cpp
+    Renderer/MeshPrimitivesTests.cpp
 
     ThirdParty/EnTTTests.cpp
 )

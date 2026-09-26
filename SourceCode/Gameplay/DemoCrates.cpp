@@ -1,4 +1,4 @@
-#include "Gameplay/DemoLevel.h"
+#include "Gameplay/DemoCrates.h"
 
 #include "Core/Name.h"
 #include "Core/Transform.h"
@@ -33,7 +33,7 @@ namespace Abomination::Gameplay
         }
     }
 
-    void SpawnDemoLevel(entt::registry& registry, Renderer::RenderAssets& assets)
+    void SpawnDemoCrates(entt::registry& registry, Renderer::RenderAssets& assets, glm::vec3 center)
     {
         // The cube is built only once: if it was already added, its handle is reused.
         const std::optional<Renderer::MeshHandle> existingMesh = assets.meshes.Find(CubeMeshName);
@@ -46,21 +46,24 @@ namespace Abomination::Gameplay
             .shaderProgram = assets.shaders.Load("Shaders/TexturedMesh"),
         };
 
-        // A row of three crates standing next to each other, and one more on top of the middle one.
-        // The cube mesh has size 1, so crates of size 1 are 1 meter apart when they touch; 1.1 leaves a small gap.
-        SpawnCrate(registry, crateLook, "Crate", {-1.1f, 0.0f, 0.0f}, 1.0f);
-        SpawnCrate(registry, crateLook, "Crate", {0.0f, 0.0f, 0.0f}, 1.0f);
-        SpawnCrate(registry, crateLook, "Crate", {1.1f, 0.0f, 0.0f}, 1.0f);
-        SpawnCrate(registry, crateLook, "Stacked crate", {0.0f, 1.0f, 0.0f}, 1.0f);
+        // A row of three crates standing on the floor next to each other, and one more on top of the middle one.
+        // The cube mesh has size 1 and its origin in the middle, so a crate of size 1 stands on the floor when its center
+        // is 0.5 above it; 1.1 between the centers leaves a small gap.
+        SpawnCrate(registry, crateLook, "Crate", center + glm::vec3(-1.1f, 0.5f, 0.0f), 1.0f);
+        SpawnCrate(registry, crateLook, "Crate", center + glm::vec3(0.0f, 0.5f, 0.0f), 1.0f);
+        SpawnCrate(registry, crateLook, "Crate", center + glm::vec3(1.1f, 0.5f, 0.0f), 1.0f);
+        SpawnCrate(registry, crateLook, "Stacked crate", center + glm::vec3(0.0f, 1.5f, 0.0f), 1.0f);
 
         // Two small crates floating above and turning: an entity is a crate that spins because it has one more
         // component, not because it is a different class. They move in ticks, so they are interpolated to be drawn
         // smoothly at any frame rate; the standing crates do not need it.
-        const entt::entity leftSpinner = SpawnCrate(registry, crateLook, "Spinning crate", {-1.6f, 2.2f, 0.0f}, 0.5f);
+        const entt::entity leftSpinner =
+            SpawnCrate(registry, crateLook, "Spinning crate", center + glm::vec3(-1.6f, 2.7f, 0.0f), 0.5f);
         registry.emplace<Spin>(leftSpinner, Spin{.axis = {0.6f, 1.0f, 0.0f}, .speed = 0.8f});
         Core::EnableInterpolation(registry, leftSpinner);
 
-        const entt::entity rightSpinner = SpawnCrate(registry, crateLook, "Spinning crate", {1.6f, 2.2f, 0.0f}, 0.5f);
+        const entt::entity rightSpinner =
+            SpawnCrate(registry, crateLook, "Spinning crate", center + glm::vec3(1.6f, 2.7f, 0.0f), 0.5f);
         registry.emplace<Spin>(rightSpinner, Spin{.axis = {0.0f, 1.0f, 0.3f}, .speed = -1.5f});
         Core::EnableInterpolation(registry, rightSpinner);
     }

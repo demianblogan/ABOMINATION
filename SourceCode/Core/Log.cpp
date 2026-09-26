@@ -23,6 +23,7 @@ namespace Abomination::Core::Log
             LogCategory::Platform,
             LogCategory::Renderer,
             LogCategory::UI,
+            LogCategory::World,
         };
 
         // [12:03:41.512] [Renderer] [warning] Message
@@ -47,6 +48,8 @@ namespace Abomination::Core::Log
                     return "Renderer";
                 case LogCategory::UI:
                     return "UI";
+                case LogCategory::World:
+                    return "World";
             }
 
             return "Unknown";

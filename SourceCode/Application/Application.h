@@ -22,6 +22,11 @@ namespace Abomination::Core
     class FrameStatistics;
 }
 
+namespace Abomination::World
+{
+    struct MapData;
+}
+
 namespace Abomination
 {
     // The top-level object of the game: creates the platform objects and runs the main loop.
@@ -37,8 +42,9 @@ namespace Abomination
         [[nodiscard]] int Run();
 
     private:
+        // map: the parsed start map, whose entities the constructor creates.
         Application(Platform::SDLLibrary SDLLibrary, Platform::Window window, Renderer::RenderAssets renderAssets,
-                    UI::DebugOverlay debugOverlay) noexcept;
+                    const World::MapData& map, UI::DebugOverlay debugOverlay);
 
         // The two kinds of updates of the main loop, named like in Unity:
         //   Update()      - once per frame: what must react immediately and does not depend on time

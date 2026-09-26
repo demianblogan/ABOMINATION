@@ -47,8 +47,8 @@ set(LIBRARY_SOURCES
     Core/Version.h
     Core/Version.cpp.in
 
-    Gameplay/DemoLevel.h
-    Gameplay/DemoLevel.cpp
+    Gameplay/DemoCrates.h
+    Gameplay/DemoCrates.cpp
     Gameplay/FreeFlyCamera.h
     Gameplay/FreeFlyCameraController.h
     Gameplay/FreeFlyCameraController.cpp
@@ -121,6 +121,12 @@ set(LIBRARY_SOURCES
 
     World/BrushGeometry.h
     World/BrushGeometry.cpp
+    World/LevelLoader.h
+    World/LevelLoader.cpp
+    World/LevelMesh.h
+    World/LevelMesh.cpp
+    World/MapCoordinates.h
+    World/MapCoordinates.cpp
     World/MapData.h
     World/MapData.cpp
     World/MapParser.h

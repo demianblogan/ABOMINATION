@@ -32,6 +32,8 @@ set(TEST_SOURCES
     ThirdParty/EnTTTests.cpp
 
     World/BrushGeometryTests.cpp
+    World/LevelMeshTests.cpp
+    World/MapCoordinatesTests.cpp
     World/MapParserTests.cpp
 )
 

@@ -1,5 +1,9 @@
 #include "Renderer/MeshPrimitives.h"
 
+#include <glm/vec3.hpp>
+
+#include <array>
+#include <cstddef>
 #include <cstdint>
 
 namespace Abomination::Renderer
@@ -43,6 +47,18 @@ namespace Abomination::Renderer
             {.position = {0.5f, -0.5f, 0.5f}, .texCoord = {1.0f, 1.0f}},
             {.position = {-0.5f, -0.5f, 0.5f}, .texCoord = {0.0f, 1.0f}},
         };
+
+        // All 4 vertices of a face share the direction the face looks in, in the same order as the faces above.
+        constexpr std::array<glm::vec3, 6> FaceNormals{
+            glm::vec3(0.0f, 0.0f, 1.0f),  // Front
+            glm::vec3(0.0f, 0.0f, -1.0f), // Back
+            glm::vec3(1.0f, 0.0f, 0.0f),  // Right
+            glm::vec3(-1.0f, 0.0f, 0.0f), // Left
+            glm::vec3(0.0f, 1.0f, 0.0f),  // Top
+            glm::vec3(0.0f, -1.0f, 0.0f), // Bottom
+        };
+        for (std::size_t vertexIndex = 0; vertexIndex < data.vertices.size(); ++vertexIndex)
+            data.vertices[vertexIndex].normal = FaceNormals[vertexIndex / 4];
 
         // Two triangles per face: face N uses vertices 4N .. 4N+3 as (0, 1, 2) and (2, 3, 0), counter-clockwise.
         constexpr int FaceCount = 6;

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Platform/ScreenMode.h"
+
 #include <expected>
 #include <string>
 
@@ -21,6 +23,10 @@ namespace Abomination::Platform
         // There is no size here: the window takes its size from the monitor (see CalculateWindowedSize in WindowSizing.h).
 
         bool isResizable = true;
+
+        // Borderless by default: the game covers the screen like fullscreen, without the slow Alt+Tab of exclusive
+        // fullscreen. Not saved between runs until the Config module (0.8).
+        ScreenMode screenMode = ScreenMode::Borderless;
 
         // V-Sync: SwapBuffers() waits for the monitor refresh. No tearing, and the frame rate never exceeds the refresh rate.
         bool isVSyncEnabled = true;
@@ -59,6 +65,14 @@ namespace Abomination::Platform
 
         [[nodiscard]] bool IsVSyncEnabled() const noexcept;
 
+        // Switches between windowed, borderless and exclusive fullscreen (see ScreenMode). The size in pixels changes a
+        // moment later, when the operating system has resized the window (GetWidthInPixels() follows it). Returning to
+        // windowed mode restores the size and position the window had before. On failure the mode stays and the error
+        // is logged.
+        void SetScreenMode(ScreenMode mode);
+
+        [[nodiscard]] ScreenMode GetScreenMode() const noexcept;
+
         // Asks to close the window, like its close button does: IsCloseRequested() becomes true and the main loop ends.
         void RequestClose() noexcept;
 
@@ -87,6 +101,7 @@ namespace Abomination::Platform
         SDL_GLContextState* m_context = nullptr;
         bool m_isCloseRequested = false;
         bool m_isVSyncEnabled = false;
+        ScreenMode m_screenMode = ScreenMode::Windowed;
         int m_widthInPixels = 0;
         int m_heightInPixels = 0;
         float m_displayScale = 1.0f;

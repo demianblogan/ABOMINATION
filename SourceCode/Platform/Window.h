@@ -58,6 +58,9 @@ namespace Abomination::Platform
 
         [[nodiscard]] bool IsVSyncEnabled() const noexcept;
 
+        // Asks to close the window, like its close button does: IsCloseRequested() becomes true and the main loop ends.
+        void RequestClose() noexcept;
+
         [[nodiscard]] bool IsCloseRequested() const noexcept;
 
         // Size of the drawable area in pixels. OpenGL works in pixels, so these are the values for glViewport.

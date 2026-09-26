@@ -268,6 +268,11 @@ namespace Abomination::Platform
         return m_isVSyncEnabled;
     }
 
+    void Window::RequestClose() noexcept
+    {
+        m_isCloseRequested = true;
+    }
+
     bool Window::IsCloseRequested() const noexcept
     {
         return m_isCloseRequested;

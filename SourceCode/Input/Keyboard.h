@@ -22,6 +22,9 @@ namespace Abomination::Input
         S = 22,
         W = 26,
 
+        // Control keys
+        Escape = 41,
+
         // Function keys
         F1 = 58,
 

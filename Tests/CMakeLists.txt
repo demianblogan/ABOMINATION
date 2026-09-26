@@ -4,6 +4,7 @@ find_package(Stb REQUIRED)  # ImageTests writes test PNG files with stb_image_wr
 # --- Unit tests: one executable for all tests, mirrors SourceCode/ ------------
 set(TEST_SOURCES
     Core/AssetCacheTests.cpp
+    Core/ConvexPolygonTests.cpp
     Core/FileSystemTests.cpp
     Core/FixedTimestepTests.cpp
     Core/FrameLimiterTests.cpp
@@ -11,6 +12,7 @@ set(TEST_SOURCES
     Core/FrameTimerTests.cpp
     Core/ImageTests.cpp
     Core/LogTests.cpp
+    Core/PlaneTests.cpp
     Core/TransformTests.cpp
     Core/TransformInterpolationTests.cpp
     Core/VersionTests.cpp
@@ -29,6 +31,7 @@ set(TEST_SOURCES
 
     ThirdParty/EnTTTests.cpp
 
+    World/BrushGeometryTests.cpp
     World/MapParserTests.cpp
 )
 

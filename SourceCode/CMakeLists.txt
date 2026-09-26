@@ -21,6 +21,8 @@ set(LIBRARY_SOURCES
     Core/AssetHandle.h
     Core/BuildConfiguration.h
     Core/Clock.h
+    Core/ConvexPolygon.h
+    Core/ConvexPolygon.cpp
     Core/FileSystem.h
     Core/FileSystem.cpp
     Core/FixedTimestep.h
@@ -36,6 +38,8 @@ set(LIBRARY_SOURCES
     Core/Log.h
     Core/Log.cpp
     Core/Name.h
+    Core/Plane.h
+    Core/Plane.cpp
     Core/Transform.h
     Core/Transform.cpp
     Core/TransformInterpolation.h
@@ -115,6 +119,8 @@ set(LIBRARY_SOURCES
     UI/UIScale.h
     UI/UIScale.cpp
 
+    World/BrushGeometry.h
+    World/BrushGeometry.cpp
     World/MapData.h
     World/MapData.cpp
     World/MapParser.h

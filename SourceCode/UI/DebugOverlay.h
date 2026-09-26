@@ -97,5 +97,11 @@ namespace Abomination::UI
         bool m_isEntitiesWindowOpen = false;
 
         EntitiesWindow m_entitiesWindow;
+
+        // The UI scale chosen in Settings > Display > UI scale, and the full scale (with the display scale of Windows) the
+        // style was last built for; 0 until the first frame. Not saved between runs yet: settings files come with the
+        // Config module (0.8).
+        float m_userUIScale = 1.0f;
+        float m_appliedScale = 0.0f;
     };
 }

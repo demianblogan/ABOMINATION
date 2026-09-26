@@ -8,6 +8,7 @@
 #include "Renderer/CameraLens.h"
 #include "Renderer/MeshRenderer.h"
 #include "Renderer/RenderAssets.h"
+#include "UI/UIScale.h"
 
 #include <glm/gtc/quaternion.hpp>
 #include <glm/trigonometric.hpp>
@@ -30,6 +31,9 @@ namespace Abomination::UI
 
         // Width of the entity list on the left; the components take the rest. The border between them can be dragged.
         constexpr float EntityListWidth = 220.0f;
+
+        // Space between the entries of the module legend.
+        constexpr float LegendSpacing = 16.0f;
 
         // How much a value changes per pixel of mouse movement when it is dragged in a DragFloat field.
         constexpr float PositionDragSpeed = 0.01f;   // meters
@@ -151,7 +155,7 @@ namespace Abomination::UI
                                    ImVec2(squareSize, squareSize));
                 ImGui::SameLine();
                 ImGui::TextUnformatted(GetModuleName(module));
-                ImGui::SameLine(0.0f, 16.0f);
+                ImGui::SameLine(0.0f, ScaleToUI(LegendSpacing));
             }
             ImGui::NewLine();
         }
@@ -219,8 +223,8 @@ namespace Abomination::UI
 
     void EntitiesWindow::Draw(bool* isOpen, entt::registry& registry, const Renderer::RenderAssets& assets)
     {
-        ImGui::SetNextWindowPos(InitialPosition, ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(InitialSize, ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowPos(ScaleToUI(InitialPosition), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ScaleToUI(InitialSize), ImGuiCond_FirstUseEver);
 
         if (!ImGui::Begin("Entities", isOpen))
         {
@@ -230,7 +234,8 @@ namespace Abomination::UI
         }
 
         // Left: the list. A child window is a scrollable region inside a window; ResizeX lets the border be dragged.
-        ImGui::BeginChild("EntityList", ImVec2(EntityListWidth, 0.0f), ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX);
+        ImGui::BeginChild("EntityList", ImVec2(ScaleToUI(EntityListWidth), 0.0f),
+                          ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX);
         DrawEntityList(registry);
         ImGui::EndChild();
 

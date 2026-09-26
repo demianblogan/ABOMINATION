@@ -31,12 +31,19 @@ namespace Abomination::UI
         // after ImGui::Render(). ImGui itself waits a few seconds after a change, so the file is not written every frame.
         void SaveSettingsIfChanged();
 
+        // Scales all text and sizes of ImGui: 1.0 is the size given to Initialize(), 2.0 twice as big. Must be called
+        // between frames (before ImGui::NewFrame()), because the font is chosen at the start of a frame.
+        void SetScale(float scale);
+
     private:
-        explicit ImGuiLibrary(std::filesystem::path settingsPath) noexcept;
+        ImGuiLibrary(std::filesystem::path settingsPath, float fontSize) noexcept;
 
         void SaveSettings() const;
 
         std::filesystem::path m_settingsPath;
+
+        // The font size at scale 1.0, kept to rebuild the style for a new scale.
+        float m_fontSize = 0.0f;
 
         // False for an object whose ownership was moved to another object: such an object must not destroy the context.
         bool m_isActive = false;

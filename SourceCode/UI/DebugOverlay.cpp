@@ -8,6 +8,7 @@
 #include "Platform/Window.h"
 #include "Renderer/OpenGLLoader.h"
 #include "Renderer/RenderAssets.h"
+#include "UI/UIScale.h"
 
 #include <imgui.h>
 
@@ -30,7 +31,7 @@ namespace Abomination::UI
         // Height of all overlay text in pixels. Widgets that contain text (buttons, fields, headers, menu items) grow with
         // it; sizes given in pixels (the graph width, the first size of a window) stay as they are.
         // The game interface (menus, HUD) will have its own fonts.
-        constexpr float FontSize = 22.0f;
+        constexpr float FontSize = 18.0f;
 
         // Distance from the edges of the game window (below the menu bar) to the performance window, in pixels.
         constexpr float PerformanceWindowMargin = 10.0f;
@@ -56,6 +57,10 @@ namespace Abomination::UI
         //   144    - an uneven pattern (0, 0, 1, 0, 1, ...), where movement stutters without interpolation;
         //   240    - common fast monitors, many frames without a tick.
         constexpr std::array FramesPerSecondLimits{0, 15, 30, 60, 120, 144, 240};
+
+        // The UI scales offered in Settings > Display > UI scale. They multiply the display scale of Windows: for a screen
+        // whose Windows setting does not match how far away it is (a 4K TV at 100%, seen from the sofa).
+        constexpr std::array UserUIScales{0.75f, 1.0f, 1.25f, 1.5f, 2.0f};
 
         // The window has a title bar with a close button and can be collapsed by the arrow in it, but it cannot be moved:
         //   AlwaysAutoResize   - the size always fits the contents (so it cannot be resized by hand either);
@@ -149,6 +154,16 @@ namespace Abomination::UI
     void DebugOverlay::Draw(const DebugOverlayContext& context)
     {
         // 1. Start the frame: the backends pass ImGui the window size, the time and the input of this frame.
+        // 0. The scale of the interface: the display scale of Windows (2.0 on a 4K monitor at 200%) times the UI scale chosen
+        //    in the menu. The style is rebuilt only when the scale changes, and before the frame starts, because ImGui picks
+        //    the font for the whole frame in NewFrame().
+        const float scale = context.window.GetDisplayScale() * m_userUIScale;
+        if (scale != m_appliedScale)
+        {
+            m_library.SetScale(scale);
+            m_appliedScale = scale;
+        }
+
         m_rendererBackend.StartFrame();
         m_platformBackend.StartFrame();
         ImGui::NewFrame();
@@ -231,6 +246,23 @@ namespace Abomination::UI
                     ImGui::EndMenu();
                 }
 
+                // The tooltip belongs to the "UI scale" item itself, so it is set right after BeginMenu(), whether the
+                // submenu is open or not.
+                const bool isUIScaleMenuOpen = ImGui::BeginMenu("UI scale");
+                ImGui::SetItemTooltip("Multiplies the display scale of Windows (now %.0f%%).",
+                                      context.window.GetDisplayScale() * 100.0f);
+                if (isUIScaleMenuOpen)
+                {
+                    for (const float userScale : UserUIScales)
+                    {
+                        const std::string label = std::format("{:.0f}%", userScale * 100.0f);
+                        if (ImGui::MenuItem(label.c_str(), nullptr, m_userUIScale == userScale))
+                            m_userUIScale = userScale;
+                    }
+
+                    ImGui::EndMenu();
+                }
+
                 ImGui::EndMenu();
             }
 
@@ -245,7 +277,8 @@ namespace Abomination::UI
         // The window is placed below the menu bar, whose height is the height of one line of ImGui widgets.
         // Both calls only affect the next Begin(). ImGuiCond_Always applies the position every frame,
         // so the window stays pinned to the corner.
-        const ImVec2 position(PerformanceWindowMargin, ImGui::GetFrameHeight() + PerformanceWindowMargin);
+        const float margin = ScaleToUI(PerformanceWindowMargin);
+        const ImVec2 position(margin, ImGui::GetFrameHeight() + margin);
         ImGui::SetNextWindowPos(position, ImGuiCond_Always);
         ImGui::SetNextWindowBgAlpha(PerformanceWindowBackgroundAlpha);
 
@@ -301,7 +334,8 @@ namespace Abomination::UI
             const std::string graphCaption = std::format("0 - {:.0f} ms", graphTop * MillisecondsPerSecond);
 
             ImGui::PlotLines("##FrameTimes", frameTimeSamples.data(), static_cast<int>(frameTimeSamples.size()),
-                             oldestSampleIndex, graphCaption.c_str(), 0.0f, graphTop, ImVec2(GraphWidth, GraphHeight));
+                             oldestSampleIndex, graphCaption.c_str(), 0.0f, graphTop,
+                             ScaleToUI(ImVec2(GraphWidth, GraphHeight)));
         }
         ImGui::End();
     }
@@ -310,8 +344,8 @@ namespace Abomination::UI
     {
         // ImGuiCond_FirstUseEver applies the position and size only when the settings file does not know the window yet:
         // afterwards the window opens where it was left.
-        ImGui::SetNextWindowPos(AssetsWindowInitialPosition, ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(AssetsWindowInitialSize, ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowPos(ScaleToUI(AssetsWindowInitialPosition), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ScaleToUI(AssetsWindowInitialSize), ImGuiCond_FirstUseEver);
 
         if (ImGui::Begin("Assets", &m_isAssetsWindowOpen))
         {

@@ -34,6 +34,20 @@ namespace Abomination::UI
             // The built-in vector font stays sharp at any size, unlike the built-in pixel font (sharp only at 13 px).
             fonts->AddFontDefaultVector();
         }
+
+        // Sets the whole ImGui style for a scale: the dark colors, the font size and all paddings, spacings and borders.
+        // ScaleAllSizes() multiplies the current sizes, so calling it twice would scale twice: the style is reset to the
+        // defaults first, and every change of scale starts from the same base.
+        // FontScaleDpi scales all text; ImGui 1.92 draws the font anew at the needed size, so large text stays sharp.
+        void ApplyStyle(float fontSize, float scale)
+        {
+            ImGuiStyle& style = ImGui::GetStyle();
+            style = ImGuiStyle();
+            ImGui::StyleColorsDark();
+            style.FontSizeBase = fontSize;
+            style.ScaleAllSizes(scale);
+            style.FontScaleDpi = scale;
+        }
     }
 
     std::expected<ImGuiLibrary, std::string> ImGuiLibrary::Initialize(const std::filesystem::path& fontPath, float fontSize,
@@ -54,24 +68,24 @@ namespace Abomination::UI
             ImGui::LoadIniSettingsFromDisk(settingsPath.string().c_str());
 
         AddDebugUIFont(fontPath, fontSize);
-        ImGui::GetStyle().FontSizeBase = fontSize;
-
-        ImGui::StyleColorsDark();
+        ApplyStyle(fontSize, 1.0f);
 
         Core::Log::Write(LogCategory::UI, LogLevel::Info, "Dear ImGui {} initialized", IMGUI_VERSION);
 
-        ImGuiLibrary library(std::move(settingsPath));
+        ImGuiLibrary library(std::move(settingsPath), fontSize);
         library.m_isActive = true;
 
         return library;
     }
 
-    ImGuiLibrary::ImGuiLibrary(std::filesystem::path settingsPath) noexcept
+    ImGuiLibrary::ImGuiLibrary(std::filesystem::path settingsPath, float fontSize) noexcept
         : m_settingsPath(std::move(settingsPath))
+        , m_fontSize(fontSize)
     {}
 
     ImGuiLibrary::ImGuiLibrary(ImGuiLibrary&& other) noexcept
         : m_settingsPath(std::move(other.m_settingsPath))
+        , m_fontSize(other.m_fontSize)
         , m_isActive(std::exchange(other.m_isActive, false))
     {}
 
@@ -86,6 +100,7 @@ namespace Abomination::UI
             }
 
             m_settingsPath = std::move(other.m_settingsPath);
+            m_fontSize = other.m_fontSize;
             m_isActive = std::exchange(other.m_isActive, false);
         }
 
@@ -101,6 +116,11 @@ namespace Abomination::UI
             SaveSettings();
             ImGui::DestroyContext();
         }
+    }
+
+    void ImGuiLibrary::SetScale(float scale)
+    {
+        ApplyStyle(m_fontSize, scale);
     }
 
     void ImGuiLibrary::SaveSettingsIfChanged()

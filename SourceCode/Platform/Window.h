@@ -64,6 +64,11 @@ namespace Abomination::Platform
         [[nodiscard]] int GetWidthInPixels() const noexcept;
         [[nodiscard]] int GetHeightInPixels() const noexcept;
 
+        // The display scale of Windows for the monitor the window is on: 1.0 at 100%, 1.5 at 150%, 2.0 at 200% (usual for
+        // 4K monitors). Things drawn in pixels (the debug overlay) are multiplied by it to keep the size the user expects.
+        // Updated when the setting changes or the window moves to a monitor with another scale.
+        [[nodiscard]] float GetDisplayScale() const noexcept;
+
         // The SDL handles of the window and its OpenGL context, for other Platform classes (ImGuiPlatformBackend).
         // Code outside Platform cannot use them: SDL types are only declared there, never defined.
         [[nodiscard]] SDL_Window* GetSDLWindow() const noexcept;
@@ -80,6 +85,7 @@ namespace Abomination::Platform
         bool m_isVSyncEnabled = false;
         int m_widthInPixels = 0;
         int m_heightInPixels = 0;
+        float m_displayScale = 1.0f;
     };
 
     // A pointer to a function without parameters and return value. OpenGL functions have different signatures,

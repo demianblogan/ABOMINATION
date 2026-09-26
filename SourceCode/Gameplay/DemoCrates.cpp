@@ -42,7 +42,7 @@ namespace Abomination::Gameplay
 
         const Renderer::MeshRenderer crateLook{
             .mesh = cubeMesh,
-            .texture = assets.textures.Load("Textures/Crate.png"),
+            .texture = assets.textures.Load("Textures/Episode1/Crate_Rotten.png"),
             .shaderProgram = assets.shaders.Load("Shaders/TexturedMesh"),
         };
 

@@ -44,10 +44,11 @@ can be placed. This is described by two files kept in the repository:
 `Assets/Maps/Test.map` is the first map, used to develop map loading:
 
 1. *File → New Map*, choose *Abomination*, map format *Valve*.
-2. In the material browser (the *Face* tab of the right panel) select `Crate`
-   in the *Textures* collection: new brushes get the selected material. A map
-   stores the texture of a face by its file name without the extension
-   (`Crate` for `Assets/Textures/Crate.png`).
+2. In the material browser (the *Face* tab of the right panel) select a
+   texture, for example `Wall_MossyBrick` in the *Episode1* collection: new
+   brushes get the selected material. Every folder in `Assets/Textures` is a
+   collection; a map stores the texture of a face by its path in
+   `Assets/Textures` without the extension (`Episode1/Wall_MossyBrick`).
 3. **Room.** In the 3D view, left-drag on the grid to draw a box of about
    512 × 512 units, then raise it to 256 units (hold `Alt` while dragging to
    change the height). With the box selected, use *Edit → CSG → Hollow*: the

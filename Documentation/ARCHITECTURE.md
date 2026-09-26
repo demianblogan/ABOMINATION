@@ -34,7 +34,7 @@ Abomination/
 ├── Documentation/      Project documentation
 ├── SourceCode/         Game source code, one folder per module
 ├── Tests/              GoogleTest unit tests, mirrors SourceCode/
-├── Tools/              Helper tools: TrenchBroom game configuration (level compiler later)
+├── Tools/              Helper tools: TrenchBroom game configuration, texture generator (level compiler later)
 ├── ThirdParty/         Third-party code not available in vcpkg (GLAD)
 ├── CMakeLists.txt
 ├── CMakePresets.json

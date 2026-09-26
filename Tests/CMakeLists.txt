@@ -23,9 +23,9 @@ set(TEST_SOURCES
     Input/KeyboardTests.cpp
     Input/MouseTests.cpp
 
-    Renderer/CameraTests.cpp
     Renderer/GLTextureTests.cpp
     Renderer/MeshPrimitivesTests.cpp
+    Renderer/ViewTests.cpp
 
     ThirdParty/EnTTTests.cpp
 )

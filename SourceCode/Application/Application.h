@@ -8,12 +8,10 @@
 #include "Input/InputDevices.h"
 #include "Platform/SDLLibrary.h"
 #include "Platform/Window.h"
-#include "Renderer/Camera.h"
 #include "Renderer/RenderAssets.h"
 #include "UI/DebugOverlay.h"
 
 #include <entt/entt.hpp>
-#include <glm/vec3.hpp>
 
 #include <expected>
 #include <filesystem>
@@ -55,9 +53,6 @@ namespace Abomination
         // frameStatistics: the numbers for the overlay.
         void Render(const Core::FrameStatistics& frameStatistics);
 
-        // The camera the frame is drawn through: m_camera with its position interpolated between the last two ticks.
-        [[nodiscard]] Renderer::Camera GetInterpolatedCamera() const;
-
         // Members are destroyed in reverse order of declaration: the overlay and the assets first (they use OpenGL),
         // then the window, then SDL, which the window needs.
         Platform::SDLLibrary m_SDLLibrary;
@@ -70,10 +65,9 @@ namespace Abomination
         // stay valid when Application (and with it m_renderAssets) is moved out of Create().
         entt::registry m_registry;
 
-        // The camera the scene is drawn through, and the controller that flies it.
-        // m_previousCameraPosition is the position before the last tick, needed for interpolation.
-        Renderer::Camera m_camera;
-        glm::vec3 m_previousCameraPosition{0.0f};
+        // The camera entity the scene is drawn through (an entity number: its components live in m_registry), and the
+        // controller that flies it.
+        entt::entity m_camera = entt::null;
         Gameplay::FreeFlyCameraController m_cameraController;
         UI::DebugOverlay m_debugOverlay;
 

@@ -42,9 +42,10 @@ set(LIBRARY_SOURCES
     Core/Version.h
     Core/Version.cpp.in
 
-    Gameplay/FreeFlyCameraController.h
     Gameplay/DemoLevel.h
     Gameplay/DemoLevel.cpp
+    Gameplay/FreeFlyCamera.h
+    Gameplay/FreeFlyCameraController.h
     Gameplay/FreeFlyCameraController.cpp
     Gameplay/Spin.h
     Gameplay/Spin.cpp
@@ -69,8 +70,7 @@ set(LIBRARY_SOURCES
     Platform/Window.h
     Platform/Window.cpp
 
-    Renderer/Camera.h
-    Renderer/Camera.cpp
+    Renderer/CameraLens.h
     Renderer/DebugOutput.h
     Renderer/DebugOutput.cpp
     Renderer/GLBuffer.h
@@ -102,6 +102,8 @@ set(LIBRARY_SOURCES
     Renderer/ShaderStore.cpp
     Renderer/TextureStore.h
     Renderer/TextureStore.cpp
+    Renderer/View.h
+    Renderer/View.cpp
 
     UI/DebugOverlay.h
     UI/DebugOverlay.cpp

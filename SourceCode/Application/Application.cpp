@@ -4,16 +4,18 @@
 #include "Core/FrameStatistics.h"
 #include "Core/FrameTimer.h"
 #include "Core/Log.h"
+#include "Core/Transform.h"
 #include "Core/TransformInterpolation.h"
 #include "Gameplay/DemoLevel.h"
 #include "Gameplay/Spin.h"
 #include "Platform/SystemServices.h"
 #include "Renderer/DebugOutput.h"
 #include "Renderer/OpenGLLoader.h"
+#include "Renderer/CameraLens.h"
 #include "Renderer/RenderCommands.h"
 #include "Renderer/RenderSystem.h"
+#include "Renderer/View.h"
 
-#include <glm/common.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 
@@ -79,12 +81,10 @@ namespace Abomination
         , m_renderAssets(std::move(renderAssets))
         , m_debugOverlay(std::move(debugOverlay))
     {
-        m_camera.SetPosition(InitialCameraPosition);
-        m_previousCameraPosition = InitialCameraPosition;
-
         // Entities are created here, not in Create(): the registry is a member, and the handles the components get from
         // m_renderAssets stay valid because they are numbers, not pointers.
         Gameplay::SpawnDemoLevel(m_registry, m_renderAssets);
+        m_camera = Gameplay::SpawnFreeFlyCamera(m_registry, InitialCameraPosition);
     }
 
     int Application::Run()
@@ -148,7 +148,15 @@ namespace Abomination
         // Turning follows the mouse every frame, not in ticks: it uses the mouse movement of this frame, which does not
         // depend on time. In ticks, the movement of a frame without ticks would be lost and applied twice in a frame
         // with two ticks.
-        m_cameraController.UpdateRotation(m_camera, m_actionStates, m_inputDevices.mouse);
+        Core::Transform& cameraTransform = m_registry.get<Core::Transform>(m_camera);
+        m_cameraController.UpdateRotation(m_registry.get<Gameplay::FreeFlyCamera>(m_camera), cameraTransform,
+                                          m_actionStates, m_inputDevices.mouse);
+
+        // The rotation from the mouse is already up to date in this frame, so it must not be interpolated between ticks:
+        // drawing a rotation between the last two ticks would make the view lag behind the mouse. Setting the previous
+        // rotation to the current one makes the interpolation give exactly the current rotation, while the position
+        // (changed in ticks) is still interpolated.
+        m_registry.get<Core::PreviousTransform>(m_camera).value.rotation = cameraTransform.rotation;
     }
 
     void Application::FixedUpdate(float tickDuration)
@@ -156,9 +164,7 @@ namespace Abomination
         // First of all: remember where every interpolated entity is before this tick moves anything.
         Core::StorePreviousTransforms(m_registry);
 
-        // Remembered before the camera moves, so a frame can be drawn anywhere between this position and the new one.
-        m_previousCameraPosition = m_camera.GetPosition();
-        m_cameraController.UpdateMovement(m_camera, m_actionStates, tickDuration);
+        m_cameraController.UpdateMovement(m_registry.get<Core::Transform>(m_camera), m_actionStates, tickDuration);
 
         Gameplay::UpdateSpinningEntities(m_registry, tickDuration);
     }
@@ -174,9 +180,17 @@ namespace Abomination
         // A minimized window has a height of 0: there is nothing to draw, and the aspect ratio would divide by zero.
         if (widthInPixels > 0 && heightInPixels > 0)
         {
+            const float interpolationFactor = m_fixedTimestep.GetInterpolationFactor();
             const float aspectRatio = static_cast<float>(widthInPixels) / static_cast<float>(heightInPixels);
-            Renderer::DrawMeshes(m_registry, GetInterpolatedCamera(), aspectRatio, m_fixedTimestep.GetInterpolationFactor(),
-                                 m_renderAssets);
+
+            // The camera is drawn from where it is between the last two ticks, like every other interpolated entity.
+            const Core::Transform cameraTransform =
+                Core::InterpolateTransform(m_registry.get<Core::PreviousTransform>(m_camera).value,
+                                           m_registry.get<Core::Transform>(m_camera), interpolationFactor);
+            const Renderer::View view =
+                Renderer::CalculateView(cameraTransform, m_registry.get<Renderer::CameraLens>(m_camera), aspectRatio);
+
+            Renderer::DrawMeshes(m_registry, view, interpolationFactor, m_renderAssets);
         }
 
         // The overlay is drawn last, on top of the game.
@@ -189,18 +203,5 @@ namespace Abomination
         });
 
         m_window.SwapBuffers();
-    }
-
-    Renderer::Camera Application::GetInterpolatedCamera() const
-    {
-        // glm::mix(a, b, t) = a + (b - a) * t: the point at fraction t of the way from a to b (like std::lerp,
-        // but for vectors). t is the part of the next tick that has already passed, so the drawn position follows
-        // the real time (at most one tick behind the simulation). Only the position is interpolated: the rotation is
-        // already up to date, because turning happens every frame.
-        Renderer::Camera camera = m_camera;
-        const float interpolationFactor = m_fixedTimestep.GetInterpolationFactor();
-        camera.SetPosition(glm::mix(m_previousCameraPosition, m_camera.GetPosition(), interpolationFactor));
-
-        return camera;
     }
 }

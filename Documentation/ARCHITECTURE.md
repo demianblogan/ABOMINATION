@@ -154,21 +154,35 @@ A module may depend only on modules **below** it in this diagram.
 - **The debug overlay** has a main menu bar (F1): *View* opens and closes
   debug windows (now *Performance*, *Assets* and *Entities*), *Settings*
   changes settings grouped like the future options menu (now *Display*:
-  V-Sync, FPS limit). The font size is one constant next to the font file
-  name in `DebugOverlay.cpp`. `Draw()` takes one `UI::DebugOverlayContext` with references to the systems
-  the overlay shows and changes; a new debug tool adds a field to it instead
-  of a new parameter. The references are valid only during the call.
-  Positions and sizes of the windows are saved in `DebugOverlay.ini` next to
-  the executable. `UI::ImGuiLibrary` loads and saves that file itself instead
-  of giving ImGui a `const char*` path, which would dangle when the library
-  object is moved.
+  V-Sync, FPS limit, UI scale). The font size is one constant next to the font
+  file name in `DebugOverlay.cpp`. `Draw()` takes one `UI::DebugOverlayContext`
+  with references to the systems the overlay shows and changes; a new debug
+  tool adds a field to it instead of a new parameter. The references are valid
+  only during the call. Positions and sizes of the windows are saved in
+  `DebugOverlay.ini` next to the executable. `UI::ImGuiLibrary` loads and saves
+  that file itself instead of giving ImGui a `const char*` path, which would
+  dangle when the library object is moved.
+- **Scaling for high-DPI monitors.** The overlay draws at
+  `Window::GetDisplayScale()` (the display scale of Windows: 2.0 on a 4K
+  monitor at 200%, updated when the window moves to another monitor) times
+  the UI scale chosen in *Settings > Display* (not saved between runs until
+  the Config module, 0.8). When the scale changes, `ImGuiLibrary::SetScale`
+  rebuilds the style from the defaults (`ScaleAllSizes` multiplies, so it must
+  start from the same base) and sets `FontScaleDpi`, which makes ImGui draw
+  the font anew at the needed size, so text stays sharp. Sizes the overlay
+  gives in pixels (graph width, first window positions) go through
+  `UI::ScaleToUI`. The debug overlay does not grow with the size of the game
+  window, like editor panels; the game HUD (0.4) will scale with the screen
+  height instead.
 
 **Startup order** (`Main.cpp` → `Application::Create`)
 
 1. Logging starts; the log file is written next to the executable.
 2. `Platform::SDLLibrary` initializes SDL.
 3. `Platform::Window` creates the window and the OpenGL 4.6 Core context
-   (a debug context in Debug builds).
+   (a debug context in Debug builds). The requested size is meant at 100% and
+   is multiplied by the display scale of the primary monitor, so the window
+   looks the same size on a 4K monitor at 200%.
 4. `Renderer::LoadOpenGLFunctions` loads the OpenGL functions through GLAD and
    checks that 4.6 is available.
 5. In Debug builds `Renderer::EnableDebugOutput` routes driver messages to the

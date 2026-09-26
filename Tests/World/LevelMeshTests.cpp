@@ -8,6 +8,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <vector>
 #include <string_view>
@@ -40,26 +41,36 @@ namespace Abomination::World
             // Every texture is 64 x 64 texels.
             return BuildLevelMesh(map.value().entities.at(0), [](const std::string&) { return glm::ivec2(64, 64); });
         }
+
+        // The cube map has one texture on all faces, so its level mesh has exactly one part.
+        const Renderer::MeshData& GetOnlyPart(const LevelMesh& mesh)
+        {
+            EXPECT_EQ(mesh.parts.size(), 1u);
+
+            return mesh.parts.at(0).data;
+        }
     }
 
     TEST(LevelMesh, CubeGivesTwoTrianglesPerFace)
     {
         const LevelMesh mesh = BuildFromMap(CubeMap);
+        const Renderer::MeshData& data = GetOnlyPart(mesh);
 
         EXPECT_EQ(mesh.statistics.brushCount, 1);
         EXPECT_EQ(mesh.statistics.faceCount, 6);
         EXPECT_EQ(mesh.statistics.triangleCount, 12);
-        EXPECT_EQ(mesh.data.vertices.size(), 24u);
-        EXPECT_EQ(mesh.data.indices.size(), 36u);
+        EXPECT_EQ(data.vertices.size(), 24u);
+        EXPECT_EQ(data.indices.size(), 36u);
     }
 
     TEST(LevelMesh, VerticesAreInGameMetersAndAxes)
     {
         const LevelMesh mesh = BuildFromMap(CubeMap);
-        ASSERT_FALSE(mesh.data.vertices.empty());
+        const Renderer::MeshData& data = GetOnlyPart(mesh);
+        ASSERT_FALSE(data.vertices.empty());
 
         // Map x and y from 0 to 64 and z from 0 to 64 become game x from 0 to 2, y from 0 to 2 and z from -2 to 0.
-        for (const Renderer::MeshVertex& vertex : mesh.data.vertices)
+        for (const Renderer::MeshVertex& vertex : data.vertices)
         {
             EXPECT_TRUE(std::abs(vertex.position.x) < Tolerance || std::abs(vertex.position.x - 2.0f) < Tolerance);
             EXPECT_TRUE(std::abs(vertex.position.y) < Tolerance || std::abs(vertex.position.y - 2.0f) < Tolerance);
@@ -70,10 +81,11 @@ namespace Abomination::World
     TEST(LevelMesh, NormalsPointOutOfCube)
     {
         const LevelMesh mesh = BuildFromMap(CubeMap);
-        ASSERT_FALSE(mesh.data.vertices.empty());
+        const Renderer::MeshData& data = GetOnlyPart(mesh);
+        ASSERT_FALSE(data.vertices.empty());
         const glm::vec3 cubeCenter(1.0f, 1.0f, -1.0f);
 
-        for (const Renderer::MeshVertex& vertex : mesh.data.vertices)
+        for (const Renderer::MeshVertex& vertex : data.vertices)
         {
             EXPECT_NEAR(glm::length(vertex.normal), 1.0f, Tolerance);
             EXPECT_GT(glm::dot(vertex.normal, vertex.position - cubeCenter), 0.0f);
@@ -84,13 +96,14 @@ namespace Abomination::World
     {
         // The front side of every triangle (counter-clockwise order) must face the same way as the normal of its face.
         const LevelMesh mesh = BuildFromMap(CubeMap);
-        ASSERT_FALSE(mesh.data.indices.empty());
+        const Renderer::MeshData& data = GetOnlyPart(mesh);
+        ASSERT_FALSE(data.indices.empty());
 
-        for (std::size_t first = 0; first < mesh.data.indices.size(); first += 3)
+        for (std::size_t first = 0; first < data.indices.size(); first += 3)
         {
-            const Renderer::MeshVertex& a = mesh.data.vertices[mesh.data.indices[first]];
-            const Renderer::MeshVertex& b = mesh.data.vertices[mesh.data.indices[first + 1]];
-            const Renderer::MeshVertex& c = mesh.data.vertices[mesh.data.indices[first + 2]];
+            const Renderer::MeshVertex& a = data.vertices[data.indices[first]];
+            const Renderer::MeshVertex& b = data.vertices[data.indices[first + 1]];
+            const Renderer::MeshVertex& c = data.vertices[data.indices[first + 2]];
 
             const glm::vec3 triangleFacing = glm::cross(b.position - a.position, c.position - a.position);
             EXPECT_GT(glm::dot(triangleFacing, a.normal), 0.0f);
@@ -102,11 +115,12 @@ namespace Abomination::World
         // Every face of the cube is 64 x 64 units with texture axes along its edges, so with a 64 x 64 texture its
         // corners get texture coordinates 0 and 1: the texture fits the face exactly once.
         const LevelMesh mesh = BuildFromMap(CubeMap);
-        ASSERT_FALSE(mesh.data.vertices.empty());
+        const Renderer::MeshData& data = GetOnlyPart(mesh);
+        ASSERT_FALSE(data.vertices.empty());
 
         bool hasZero = false;
         bool hasOne = false;
-        for (const Renderer::MeshVertex& vertex : mesh.data.vertices)
+        for (const Renderer::MeshVertex& vertex : data.vertices)
             for (const float coordinate : {vertex.texCoord.x, vertex.texCoord.y})
             {
                 const bool isZero = std::abs(coordinate) < Tolerance;
@@ -135,5 +149,33 @@ namespace Abomination::World
         ASSERT_EQ(askedNames.size(), 6u); // once per face
         for (const std::string& name : askedNames)
             EXPECT_EQ(name, "Crate");
+    }
+
+    TEST(LevelMesh, FacesAreSplitByTexture)
+    {
+        // The cube with two textures: the bottom face is Floor, the other five are Wall.
+        std::string mapText(CubeMap);
+        const std::size_t bottomFace = mapText.find("( 0 64 0 ) ( 0 0 0 ) ( 64 0 0 ) Crate");
+        ASSERT_NE(bottomFace, std::string::npos);
+        mapText.replace(mapText.find("Crate", bottomFace), 5, "Floor");
+        for (std::size_t position = mapText.find("Crate"); position != std::string::npos; position = mapText.find("Crate"))
+            mapText.replace(position, 5, "Wall");
+
+        const LevelMesh mesh = BuildFromMap(mapText);
+
+        // Parts come in the order the textures first appear: four Wall faces come before the bottom face in the file.
+        ASSERT_EQ(mesh.parts.size(), 2u);
+        EXPECT_EQ(mesh.parts[0].textureName, "Wall");
+        EXPECT_EQ(mesh.parts[0].data.indices.size(), 5u * 6u); // 5 faces, 2 triangles each
+        EXPECT_EQ(mesh.parts[1].textureName, "Floor");
+        EXPECT_EQ(mesh.parts[1].data.indices.size(), 6u);
+
+        // Every part is a mesh of its own: its indices point only to its own vertices.
+        for (const LevelMeshPart& part : mesh.parts)
+            for (const std::uint32_t index : part.data.indices)
+                EXPECT_LT(index, part.data.vertices.size());
+
+        EXPECT_EQ(mesh.statistics.faceCount, 6);
+        EXPECT_EQ(mesh.statistics.triangleCount, 12);
     }
 }

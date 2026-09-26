@@ -8,6 +8,8 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace Abomination::World
@@ -15,8 +17,10 @@ namespace Abomination::World
     LevelMesh BuildLevelMesh(const MapEntity& entity, const TextureSizeLookup& getTextureSize)
     {
         LevelMesh result;
-        Renderer::MeshData& data = result.data;
         LevelMeshStatistics& counts = result.statistics;
+
+        // Texture name -> index of its part in result.parts, to find the part of a face without searching the list.
+        std::unordered_map<std::string, std::size_t> partIndices;
 
         for (const MapBrush& brush : entity.brushes)
         {
@@ -34,6 +38,13 @@ namespace Abomination::World
                     continue;
 
                 ++counts.faceCount;
+
+                // try_emplace adds the texture with the index of a new part only if it is not there yet; either way it
+                // returns the entry of the texture (and whether it was just added).
+                const auto [entry, isNewTexture] = partIndices.try_emplace(face.textureName, result.parts.size());
+                if (isNewTexture)
+                    result.parts.push_back(LevelMeshPart{.textureName = face.textureName});
+                Renderer::MeshData& data = result.parts[entry->second].data;
 
                 // The corners of the face in game coordinates. They are counter-clockwise seen from the front, so the
                 // cross product of two edges points out of the face: that is its normal. Texture coordinates are

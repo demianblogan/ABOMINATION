@@ -91,18 +91,25 @@ namespace Abomination::World
         LevelMesh levelMesh = BuildLevelMesh(*world, getTextureSize);
         level.statistics = levelMesh.statistics;
 
-        // Until the level is drawn grouped by texture (the next step), it is drawn by the solid shaded program, which does
-        // not read a texture: the texture handle stays empty.
-        level.geometry = registry.create();
-        registry.emplace<Core::Name>(level.geometry, "World geometry");
-        registry.emplace<Core::Transform>(level.geometry);
-        registry.emplace<Renderer::MeshRenderer>(level.geometry, Renderer::MeshRenderer{
-            .mesh = assets.meshes.Add(mapName, levelMesh.data),
-            .shaderProgram = assets.shaders.Load("Shaders/SolidShaded"),
-        });
+        // One entity per texture: every one is one draw call with its own texture. The textures were loaded above, so
+        // Load() only returns their handles now.
+        const Renderer::ShaderHandle shaderProgram = assets.shaders.Load("Shaders/TexturedShaded");
+        for (const LevelMeshPart& part : levelMesh.parts)
+        {
+            const entt::entity entity = registry.create();
+            registry.emplace<Core::Name>(entity, "World geometry: " + part.textureName);
+            registry.emplace<Core::Transform>(entity);
+            registry.emplace<Renderer::MeshRenderer>(entity, Renderer::MeshRenderer{
+                .mesh = assets.meshes.Add(mapName + "#" + part.textureName, part.data),
+                .texture = assets.textures.Load(MakeTexturePath(part.textureName)),
+                .shaderProgram = shaderProgram,
+            });
+            level.geometry.push_back(entity);
+        }
 
-        Core::Log::Write(LogCategory::World, LogLevel::Info, "Level {} loaded: {} brushes, {} faces, {} triangles", mapName,
-                         level.statistics.brushCount, level.statistics.faceCount, level.statistics.triangleCount);
+        Core::Log::Write(LogCategory::World, LogLevel::Info, "Level {} loaded: {} brushes, {} faces, {} triangles, {} textures",
+                         mapName, level.statistics.brushCount, level.statistics.faceCount, level.statistics.triangleCount,
+                         levelMesh.parts.size());
 
         return level;
     }

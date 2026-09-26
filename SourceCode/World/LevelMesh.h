@@ -7,6 +7,7 @@
 
 #include <functional>
 #include <string>
+#include <vector>
 
 namespace Abomination::World
 {
@@ -18,10 +19,20 @@ namespace Abomination::World
         int triangleCount = 0;
     };
 
-    // The geometry of all brushes of an entity (the world) ready to become one mesh, and the numbers about it.
+    // The faces of the level that have one texture, ready to become one mesh. One draw call draws with one texture, so the
+    // level is split into one part per texture.
+    struct LevelMeshPart
+    {
+        // As the map writes it: "Episode1/Wall_MossyBrick".
+        std::string textureName;
+        Renderer::MeshData data;
+    };
+
+    // The geometry of all brushes of an entity (the world), split by texture, and the numbers about it.
     struct LevelMesh
     {
-        Renderer::MeshData data;
+        // In the order the textures first appear in the map, so the same map always gives the same parts.
+        std::vector<LevelMeshPart> parts;
         LevelMeshStatistics statistics;
     };
 
@@ -31,6 +42,7 @@ namespace Abomination::World
 
     // Builds the geometry of all brushes of an entity in the game's meters and axes: every face is built from its
     // planes (BuildBrushPolygons) and cut into triangles. Every vertex gets the normal of its face and its texture
-    // coordinates (CalculateTextureCoordinates, with the texture size from getTextureSize).
+    // coordinates (CalculateTextureCoordinates, with the texture size from getTextureSize); every face goes to the part of
+    // its texture.
     [[nodiscard]] LevelMesh BuildLevelMesh(const MapEntity& entity, const TextureSizeLookup& getTextureSize);
 }

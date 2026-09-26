@@ -22,6 +22,8 @@ set(TEST_SOURCES
 
     Renderer/CameraTests.cpp
     Renderer/GLTextureTests.cpp
+
+    ThirdParty/EnTTTests.cpp
 )
 
 add_executable(AbominationTests

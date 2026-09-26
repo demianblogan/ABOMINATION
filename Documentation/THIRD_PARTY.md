@@ -16,6 +16,7 @@ line there.
 | Library | Version | License | Purpose                                  | Website                          |
 |---------|---------|---------|------------------------------------------|----------------------------------|
 | Dear ImGui | 1.92.9b | MIT  | Debug overlay (developer tools only), SDL3 and OpenGL3 backends | https://github.com/ocornut/imgui |
+| EnTT    | 4.0.0   | MIT     | Entity-component-system: entities, components, views (header-only, single header in `ThirdParty/EnTT`; vcpkg has only 3.16) | https://github.com/skypjack/entt |
 | GLAD    | 2.0.8   | (WTFPL OR CC0-1.0) AND Apache-2.0 | OpenGL 4.6 Core loader, generated into `ThirdParty/GLAD` | https://gen.glad.sh |
 | glm     | 1.0.3   | MIT     | Math: vectors, matrices (header-only)    | https://github.com/g-truc/glm    |
 | SDL3    | 3.4.16  | Zlib    | Window, OpenGL context, events, input    | https://www.libsdl.org           |

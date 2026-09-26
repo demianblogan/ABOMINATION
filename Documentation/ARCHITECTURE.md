@@ -65,6 +65,10 @@ code the game runs. The executable is just an entry point.
     without extensions: functions removed from modern OpenGL (`glBegin`, …)
     are not even declared. vcpkg has only the old GLAD 1. The generation
     settings are written at the top of `include/glad/gl.h`.
+  - `ThirdParty/EnTT` — EnTT 4.0.0, the official single header
+    `include/entt/entt.hpp` from the release tag (vcpkg has only 3.16);
+    an `INTERFACE` target, linked `PUBLIC` because game headers hold EnTT
+    types.
 - `CMake/CompilerOptions.cmake` applies `/W4 /WX /permissive- /utf-8 …` to
   every target of ours; third-party headers produce no warnings.
 - `CMake/Packaging.cmake` holds the install rules: `cmake --install` collects

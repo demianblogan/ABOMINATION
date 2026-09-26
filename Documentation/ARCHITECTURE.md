@@ -94,7 +94,9 @@ A module may depend only on modules **below** it in this diagram.
 ┌───────────────────────────────────────────────┐
 │  Application   owns everything, main loop     │   top
 ├───────────────────────────────────────────────┤
-│  Gameplay      UI          Save               │   gameplay layer
+│  UI            Save                           │   reads the game: HUD, menus, debug tools, saving
+├───────────────────────────────────────────────┤
+│  Gameplay      game rules, player, enemies    │   gameplay layer
 ├───────────────────────────────────────────────┤
 │  AI       Physics      World       Audio      │   systems layer
 ├───────────────────────────────────────────────┤
@@ -111,7 +113,7 @@ A module may depend only on modules **below** it in this diagram.
 
 | Module        | Responsibility                                                  | Status  |
 |---------------|-----------------------------------------------------------------|---------|
-| `Core`        | Time (clock, frame timer, fixed timestep, FPS limit), frame statistics, logging, files, image decoding | 0.1 |
+| `Core`        | Time (clock, frame timer, fixed timestep, FPS limit), frame statistics, logging, files, image decoding, asset handles and cache, `Transform`, `Name`, transform interpolation | 0.1 |
 | `Input`       | Keyboard and mouse state, actions and bindings (see section 7)  | 0.1     |
 | `Platform`    | SDL3 window, OpenGL context creation, OS events → `Input`       | 0.1     |
 | `Renderer`    | Everything OpenGL. Exposes a high-level API (see section 6)     | 0.1     |
@@ -120,8 +122,8 @@ A module may depend only on modules **below** it in this diagram.
 | `Physics`     | Quake-style movement, collision against the level               | Planned |
 | `AI`          | Enemy behaviour, pathfinding                                    | Planned |
 | `Audio`       | Sounds and music (miniaudio)                                    | Planned |
-| `Gameplay`    | Game rules: camera controllers (0.1); player, weapons, enemies  | 0.1     |
-| `UI`          | Dear ImGui debug overlay with a menu bar (0.1–0.2); HUD and menus (later) | 0.1 |
+| `Gameplay`    | Game rules: free-fly camera, spin, demo level (0.1–0.2); player, weapons, enemies | 0.1 |
+| `UI`          | Dear ImGui debug overlay: menu bar, performance, assets, entity inspector (0.1–0.2); HUD and menus (later) | 0.1 |
 | `Save`        | Serialization of the game state                                 | Planned |
 | `Application` | Startup, shutdown, main loop, switching between game states     | 0.1     |
 
@@ -129,6 +131,9 @@ A module may depend only on modules **below** it in this diagram.
 
 - No dependency cycles and no upward dependencies. `Renderer` never includes
   anything from `Gameplay`.
+- `UI` and `Save` sit above `Gameplay`: they **read** the game (the HUD shows
+  the player's health, the entity inspector shows gameplay components, saving
+  writes them), while game rules never know about the interface.
 - OpenGL is used only inside `Renderer`, SDL only inside `Platform`.
 - There is no graphics-API abstraction layer (RHI): OpenGL is the only
   backend. The boundary is the renderer's high-level API instead.
@@ -147,9 +152,10 @@ A module may depend only on modules **below** it in this diagram.
   (drawing), and `UI::DebugOverlay` combines them and describes the windows.
   ImGui is used only for developer tools, never for the game interface.
 - **The debug overlay** has a main menu bar (F1): *View* opens and closes
-  debug windows (now *Performance* and *Assets*), *Settings* changes settings
-  grouped like the future options menu (now *Display*: V-Sync, FPS limit).
-  `Draw()` takes one `UI::DebugOverlayContext` with references to the systems
+  debug windows (now *Performance*, *Assets* and *Entities*), *Settings*
+  changes settings grouped like the future options menu (now *Display*:
+  V-Sync, FPS limit). The font size is one constant next to the font file
+  name in `DebugOverlay.cpp`. `Draw()` takes one `UI::DebugOverlayContext` with references to the systems
   the overlay shows and changes; a new debug tool adds a field to it instead
   of a new parameter. The references are valid only during the call.
   Positions and sizes of the windows are saved in `DebugOverlay.ini` next to
@@ -168,13 +174,16 @@ A module may depend only on modules **below** it in this diagram.
 5. In Debug builds `Renderer::EnableDebugOutput` routes driver messages to the
    log.
 6. `Renderer::RenderAssets` is created: the texture store (with its
-   checkerboard fallback) and the shader store (with its compiled fallback
-   program).
-7. `Renderer::DemoScene` loads its shader program and texture through the
-   stores.
-8. `UI::DebugOverlay` creates the ImGui context and both backends, loads its
+   checkerboard fallback), the shader store (with its compiled fallback
+   program) and the mesh store (with its fallback cube).
+7. `UI::DebugOverlay` creates the ImGui context and both backends, loads its
    font from `Assets/` and its window settings (`DebugOverlay.ini`) from the
    folder of the executable.
+8. The `Application` constructor creates the entities: the demo level
+   (`Gameplay::SpawnDemoLevel`) and the camera (`Gameplay::SpawnFreeFlyCamera`).
+   It happens there and not in `Create()`, because the registry is a member of
+   `Application`; the asset handles in the components stay valid when
+   `Application` is moved, because they are numbers, not pointers.
 
 Objects that own resources are created by a static `Create()` /
 `Initialize()` returning `std::expected<Object, std::string>`, because a
@@ -209,16 +218,19 @@ while the window is open:
    depend on time — the F1 overlay toggle, capturing the mouse, turning the
    camera with the mouse.
 3. **`FixedUpdate(tickDuration)`, once per tick:** everything that moves the
-   world forward in time (now the camera movement; later physics, AI,
-   gameplay). `Core::FixedTimestep` adds the frame time to an accumulator and
+   world forward in time, as systems called in a fixed order: first
+   `Core::StorePreviousTransforms` (remember where interpolated entities are),
+   then the camera movement and the spin system; later physics, AI and
+   gameplay. `Core::FixedTimestep` adds the frame time to an accumulator and
    takes whole ticks out of it, so a frame runs 0, 1 or several ticks and the
    simulation always makes 60 ticks per second. At most 8 ticks run per
    frame: if the computer cannot keep up, the extra time is dropped and the
    game slows down instead of freezing (the "spiral of death").
-4. **`Render()`:** the frame is drawn through the camera with its position
-   interpolated between the states before and after the last tick
-   (`alpha` = time left in the accumulator / tick duration), then the debug
-   overlay, then the buffers are swapped.
+4. **`Render()`:** the `Renderer::View` of the camera entity is calculated
+   from its interpolated transform, `Renderer::DrawMeshes` draws the entities
+   (interpolated ones between their states before and after the last tick,
+   `alpha` = time left in the accumulator / tick duration), then the debug
+   overlay is drawn and the buffers are swapped.
 5. **FPS limit:** `Core::FrameLimiter` calculates how long the frame still has
    to last, `Platform::SleepPrecisely` waits (sleep plus a short busy-wait).
 
@@ -235,13 +247,18 @@ this behaves the same at 15 and at 1000 FPS.
   movement of the frame, which does not depend on time. In ticks, the
   movement of a frame without ticks would be lost and applied twice in a
   frame with two ticks, and the view would lag behind the mouse.
-- **Only the position is interpolated;** the rotation is always up to date.
-  The drawn image is at most one tick (16.7 ms) behind the simulation.
+- **Interpolation is opt-in per entity:** entities that move in ticks get a
+  `Core::PreviousTransform` (`Core::EnableInterpolation`, called once in their
+  spawn function) and are drawn between their previous and current transform:
+  position and scale with `glm::mix`, rotation with `glm::slerp`. Entities
+  that never move are drawn from their `Transform` directly. The drawn image
+  is at most one tick (16.7 ms) behind the simulation.
+- **The camera rotation is not interpolated:** it changes every frame from the
+  mouse, so after turning, the previous rotation of the camera is set to the
+  current one; only its position (changed in ticks) is interpolated.
 - **Input in ticks:** the ticks of a frame read the input of that frame. Held
   keys are never lost, but a press that starts and stops between two ticks
   would be; this is handled when jumping is added (0.2, player movement).
-- The previous camera position is kept by `Application` for now; with ECS
-  (0.2) interpolation becomes a system working on every moving entity.
 
 ## 6. Renderer
 
@@ -265,7 +282,7 @@ Inside the renderer:
   logger. It is synchronous, so a breakpoint in the callback shows the
   offending call in the call stack.
 
-**Now (0.1):**
+**Now:**
 
 - `LoadOpenGLFunctions`, `EnableDebugOutput`, the frame commands
   `SetViewport` / `ClearFrame` (color and depth).
@@ -281,17 +298,23 @@ Inside the renderer:
   - `GLTexture` — immutable storage with all mipmap levels, pixel-crisp
     filtering (`GL_NEAREST` / `GL_NEAREST_MIPMAP_LINEAR`), repeat wrapping,
     bound to texture units; knows its size and video memory.
-- `TextureStore`, `ShaderStore`, grouped in `RenderAssets` — load every
-  texture and shader program once and hand out handles (see section 9).
+- `Mesh` — geometry in video memory (vertex buffer, index buffer, vertex
+  array) that draws itself; `MeshData` is the same geometry in ordinary memory
+  (`MeshPrimitives` builds a cube). Vertex layout: position at location 0,
+  texture coordinates at location 1, for every mesh shader.
+- `TextureStore`, `ShaderStore`, `MeshStore`, grouped in `RenderAssets` — load
+  every texture, shader program and mesh once and hand out handles (see
+  section 9).
 - Explicit `layout(location)` / `layout(binding)` everywhere: C++ constants
   and shaders agree on the numbers in advance, nothing is queried at run time.
-- `Camera` — the view and projection matrices (see section 8).
-- `DemoScene` — a **temporary** rotating crate (model matrix of its own, view
-  and projection from the camera passed in, depth test, back-face culling)
-  used to learn the basics. It keeps handles to its shader program and
-  texture and its own cube geometry; replaced by entities with a mesh
-  component and a render system in 0.2 (ECS), when geometry becomes the
-  `Mesh` asset.
+- `View` — what the renderer knows about the camera of a frame: the view and
+  projection matrices and the position, calculated by `CalculateView` from the
+  camera entity's `Core::Transform` and `CameraLens` (see section 8).
+- The render system `DrawMeshes(registry, view, interpolationFactor, assets)`
+  draws every entity with `Core::Transform` + `MeshRenderer` (depth test,
+  back-face culling). It only reads the registry. Every entity binds its
+  program and texture; sorting draws by program and texture comes when there
+  are hundreds of objects.
 
 Color textures are uploaded as `GL_RGBA8` without gamma correction for now;
 sRGB textures and an sRGB framebuffer come with lighting in 0.5.
@@ -359,31 +382,48 @@ operation, so `Application` switches it when `LookAroundMode` starts/stops.
 
 ## 8. Camera
 
-- `Renderer::Camera` is the "lens": position, yaw and pitch in radians
-  (pitch clamped to ±89°, no roll), vertical FOV and clip planes; it gives
-  forward/right/up vectors and the view and projection matrices. It knows
-  nothing about input.
-- **Controllers** move a camera; there are no separate camera classes for
-  different uses. Now: `Gameplay::FreeFlyCameraController` (WASD relative to
-  the view, Q/E along the world vertical, Shift faster, mouse look while the
-  right button is held). Planned: the player's camera controller (eye height,
-  view bob, recoil), later a death camera.
-- Controllers get everything they work with as parameters instead of storing
-  references, which would dangle after their owner is moved. Turning and
-  moving are separate calls because they run at different rates (see
-  section 5): `UpdateRotation(camera, actions, mouse)` every frame,
-  `UpdateMovement(camera, actions, deltaTime)` every tick.
+The camera is an ordinary entity; `Application` keeps its number
+(`m_camera`) to know which entity is the active camera.
 
-**Planned (0.2):** with ECS the camera becomes a component of an entity
-(position and rotation in its `Transform`), the free-fly controller turns
-into a debug noclip mode of the same camera, and the renderer receives only
-a `Renderer::View` (view and projection matrices, position) of the active
-camera instead of a `Camera` object.
+```
+camera entity
+├── Core::Transform          where it stands and where it looks (position + quaternion)
+├── Core::PreviousTransform  interpolation, like every entity that moves in ticks
+├── Renderer::CameraLens     vertical field of view, near and far plane
+└── Gameplay::FreeFlyCamera  yaw and pitch, turned with the mouse
+```
+
+- A camera looks along its **local −Z** axis; its local +X is its right side,
+  local +Y the top of the screen. Its direction in the world is its rotation
+  applied to these local directions (`rotation * LocalForward`).
+- `Renderer::CalculateView` turns `Transform` + `CameraLens` into a
+  `Renderer::View`: the view matrix is the inverse of the camera's own
+  placement (move the world by −position, then turn it back by the conjugate
+  of the rotation), the projection is `glm::perspective`. The renderer gets
+  only the `View`, so it never knows which entity is the camera or how it
+  moves.
+- **Controllers** move camera entities; there are no separate camera classes.
+  Now: `Gameplay::FreeFlyCameraController` (WASD relative to the view, Q/E
+  along the world vertical, Shift faster, mouse look while the right button
+  is held). It keeps yaw and pitch in `FreeFlyCamera` (mouse movement adds to
+  them directly, pitch is clamped to ±89°, no roll) and builds the rotation
+  from them: `angleAxis(yaw, WorldUp) * angleAxis(pitch, LocalRight)`.
+  Planned: the player's camera controller (eye height, view bob, recoil) with
+  its own component instead of `FreeFlyCamera`; the free-fly camera stays as a
+  debug noclip mode.
+- Controllers get the components they work with as parameters instead of
+  storing references. Turning and moving are separate calls because they run
+  at different rates (see section 5): `UpdateRotation(freeFlyCamera,
+  transform, actions, mouse)` every frame, `UpdateMovement(transform, actions,
+  deltaTime)` every tick.
+- Names of direction constants: `World…` is an axis of the world (the same for
+  everyone), `Local…` a direction in an object's own coordinates, which is
+  turned by the object's rotation to get its direction in the world.
 
 ## 9. Assets
 
 An **asset** is data from a file that many objects use and that is loaded
-once: textures and shader programs now; meshes, materials, sounds, fonts
+once: textures, shader programs and meshes now; materials, sounds, fonts
 later. A level map is not an asset (`World` owns it, only its textures are
 assets), neither are JSON configurations (`Config`).
 
@@ -434,8 +474,9 @@ Renderer::RenderAssets                     all graphics stores, owned by Applica
   Pointers from `Get()` are valid until the next `Add()`/`Remove()`, so code
   keeps handles and asks for the object when it uses it.
 - The **stores** of each asset type load files and use a cache inside:
-  `Renderer::TextureStore`, `Renderer::ShaderStore`; later the mesh and
-  material stores (0.3) and the sound store in `Audio`. There is no single
+  `Renderer::TextureStore`, `Renderer::ShaderStore`, `Renderer::MeshStore`
+  (meshes built by code now, named like paths: `"Primitives/Cube"`; loaded from
+  model files in 0.3); later the material store (0.3) and the sound store in `Audio`. There is no single
   class that knows all asset types, so OpenGL stays in `Renderer` and sound in
   `Audio`.
 - `Renderer::RenderAssets` groups the stores of all graphics assets. Code that
@@ -455,25 +496,65 @@ Renderer::RenderAssets                     all graphics stores, owned by Applica
 - Lifetime by groups (0.2, with the first level): **global** assets live the
   whole game (weapons, HUD font), **level** assets are removed when the next
   level starts.
-- Meshes and materials as assets (0.3); sounds in `Audio` (0.3); music is
+- Meshes from model files and materials (0.3); sounds in `Audio` (0.3); music is
   streamed, not loaded whole (0.8).
 - Hot reload of shaders and textures (0.5), packed archives with a virtual
   file system (near 1.0).
 
-## 10. ECS — Planned (0.2)
+## 10. ECS
 
-Library: **EnTT**.
+Library: **EnTT 4.0.0** (`ThirdParty/EnTT`, see section 3).
 
-- **Entity** — just an ID.
-- **Component** — a plain struct with public data and no logic:
-  `Transform`, `Velocity`, `Health`, `Weapon`.
-- **System** — a function (or a small class when it needs state) that
-  iterates entities with a given set of components and updates them:
-  `UpdateMovement(registry, dt)`.
-- One `entt::registry` per loaded level. Loading a level creates a fresh
-  registry; unloading destroys it.
-- Static level geometry is **not** stored as entities; it is owned by the
-  `World` module in structures optimized for rendering and collision.
+- **Entity** — just a number (`entt::entity`): an index plus a version, like
+  `Core::AssetHandle`. A destroyed entity is recognized by `registry.valid()`.
+- **Component** — a plain struct with public data and no logic, named with a
+  noun and no `Component` suffix (`Transform`, `Spin`, `CameraLens`).
+  Components hold handles and entity numbers, never pointers.
+- **System** — a function that goes over all entities with a set of
+  components (`registry.view<A, const B>().each(...)`) and changes them:
+  `UpdateSpinningEntities(registry, deltaTime)`, `DrawMeshes(registry, ...)`.
+  A system becomes a class only when it owns data that belongs to no entity
+  (a collision tree, particle pools, voices). There is no common `System`
+  base class: systems are called one by one in `Update`, `FixedUpdate` and
+  `Render`, so their order is visible in one place and every system takes the
+  parameters it needs. `const entt::registry&` marks a system that only reads.
+- **The registry** (`entt::registry`) is owned by `Application` and passed to
+  systems as a parameter; there is no global access. When levels arrive
+  (0.2, map geometry), loading a level will clear the entities of the previous
+  one.
+- **Entity numbers** are used where one entity refers to another (an enemy's
+  target, a rocket's owner, a button's door), to add, remove or destroy
+  components of a specific entity, and for events between entities. Systems
+  that just process components do not need them.
+
+**Components now**
+
+| Component | Module | Data | Used by |
+|-----------|--------|------|---------|
+| `Transform` | Core | position, rotation (quaternion), scale | almost every system; `CalculateModelMatrix` |
+| `PreviousTransform` | Core | the transform before the last tick | `StorePreviousTransforms`, `DrawMeshes`, the camera view |
+| `Name` | Core | a name for people | entity inspector |
+| `MeshRenderer` | Renderer | mesh, texture and program handles | `DrawMeshes` |
+| `CameraLens` | Renderer | vertical FOV, near and far plane | `CalculateView` |
+| `Spin` | Gameplay | axis, speed | `UpdateSpinningEntities` |
+| `FreeFlyCamera` | Gameplay | yaw, pitch | `FreeFlyCameraController` |
+
+**Where components live.** A component lives next to the system that
+processes it, in the module it belongs to (`Renderer/MeshRenderer.h` next to
+`Renderer/RenderSystem`), not in a common `Components/` folder: such a folder
+would have to see every module and break the dependency rule. A component
+used by one system only shares its file (`Gameplay/Spin.h`); a component used
+by several gets its own header. When a module grows, it is split into topic
+folders that hold components and systems together (`Gameplay/Weapons/`,
+`Gameplay/Enemies/`), keeping the namespace of the module.
+
+**Tools.** The entity inspector of the debug overlay (View > Entities) lists
+all entities (`registry.view<entt::entity>()`) and shows and edits the
+components of the selected one; section headers are colored by module.
+A new component type gets a small drawing function there.
+
+Static level geometry is **not** stored as entities; it is owned by the
+`World` module in structures made for rendering and collision.
 
 ## 11. Data-driven design — Planned
 

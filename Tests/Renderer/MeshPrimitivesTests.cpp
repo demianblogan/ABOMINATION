@@ -29,6 +29,19 @@ namespace Abomination::Renderer
                 EXPECT_FLOAT_EQ(std::abs(vertex.position[axis]), 0.5f);
     }
 
+    TEST(MeshPrimitives, CubeNormalsPointOutOfTheirFaces)
+    {
+        // On a cube centered at the origin, the normal of a face points the same way as the position of its vertices
+        // along one axis: the vertices of the top face have y = 0.5 and the normal (0, 1, 0).
+        const MeshData cube = CreateCubeMeshData();
+
+        for (const MeshVertex& vertex : cube.vertices)
+        {
+            EXPECT_FLOAT_EQ(glm::length(vertex.normal), 1.0f);
+            EXPECT_FLOAT_EQ(glm::dot(vertex.normal, vertex.position), 0.5f);
+        }
+    }
+
     TEST(MeshPrimitives, CubeTrianglesFaceOutwards)
     {
         // Face culling keeps only triangles whose vertices go counter-clockwise on the screen. For a triangle A, B, C

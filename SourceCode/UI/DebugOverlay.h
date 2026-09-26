@@ -27,6 +27,13 @@ namespace Abomination::Platform
 namespace Abomination::Renderer
 {
     struct RenderAssets;
+    struct RenderSettings;
+    struct RenderStatistics;
+}
+
+namespace Abomination::World
+{
+    struct LevelMeshStatistics;
 }
 
 namespace Abomination::UI
@@ -42,6 +49,9 @@ namespace Abomination::UI
         Core::FrameLimiter& frameLimiter;
         const Renderer::RenderAssets& renderAssets;
         entt::registry& registry;
+        Renderer::RenderSettings& renderSettings;
+        const Renderer::RenderStatistics& renderStatistics;
+        const World::LevelMeshStatistics& levelStatistics;
     };
 
     // Developer overlay drawn with Dear ImGui on top of the game: a menu bar with debug windows and settings.
@@ -80,6 +90,10 @@ namespace Abomination::UI
         // Every loaded texture and shader program: size, video memory, and whether a fallback replaced the file.
         void DrawAssetsWindow(const DebugOverlayContext& context);
 
+        // How the scene is drawn (solid or wireframe) and how much: draw calls and triangles of the last frame, and the
+        // numbers of the loaded level.
+        void DrawRendererWindow(const DebugOverlayContext& context);
+
         // Members are destroyed in reverse order of declaration: both backends first, then the ImGui context they use.
         ImGuiLibrary m_library;
         Platform::ImGuiPlatformBackend m_platformBackend;
@@ -92,9 +106,10 @@ namespace Abomination::UI
         bool m_isVisible = Core::IsDebugBuild;
 
         // Which debug windows are open. Changed by the View menu and by the close button of each window.
-        bool m_isPerformanceWindowOpen = true;
+        bool m_isPerformanceWindowOpen = false;
         bool m_isAssetsWindowOpen = false;
         bool m_isEntitiesWindowOpen = false;
+        bool m_isRendererWindowOpen = false;
 
         EntitiesWindow m_entitiesWindow;
 

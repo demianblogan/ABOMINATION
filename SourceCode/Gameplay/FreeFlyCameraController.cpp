@@ -41,13 +41,14 @@ namespace Abomination::Gameplay
         return glm::angleAxis(yaw, WorldUp) * glm::angleAxis(pitch, LocalRight);
     }
 
-    entt::entity SpawnFreeFlyCamera(entt::registry& registry, glm::vec3 position)
+    entt::entity SpawnFreeFlyCamera(entt::registry& registry, glm::vec3 position, float yaw)
     {
         const entt::entity camera = registry.create();
         registry.emplace<Core::Name>(camera, "Camera");
-        registry.emplace<Core::Transform>(camera, Core::Transform{.position = position});
+        const Core::Transform transform{.position = position, .rotation = CalculateCameraRotation(yaw, 0.0f)};
+        registry.emplace<Core::Transform>(camera, transform);
         registry.emplace<Renderer::CameraLens>(camera);
-        registry.emplace<FreeFlyCamera>(camera);
+        registry.emplace<FreeFlyCamera>(camera, FreeFlyCamera{.yaw = yaw});
         Core::EnableInterpolation(registry, camera);
 
         return camera;

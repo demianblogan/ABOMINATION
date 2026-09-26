@@ -67,10 +67,11 @@ seen (collision, map geometry) get debug visualizations in the overlay.
 | 2 | `feat/asset-manager`            | ✅     | Typed asset handles and a generic cache, texture and shader stores with magenta fallbacks, `RenderAssets`; Assets window in the overlay, debug windows remember their positions; crate texture on the cube |
 | 3 | `feat/ecs-scene`                | ✅     | EnTT 4.0.0; `Mesh` asset and mesh store; crates as entities (`Transform`, `MeshRenderer`, `Spin`), render system; interpolation as a system for every moving entity; the camera as an entity, the renderer gets a `View`; entity inspector with module colors; `DemoScene` removed |
 | 4 | `feat/debug-ui-scaling`         | ✅     | Debug overlay follows the display scale of Windows (DPI) for 4K monitors, plus a manual UI scale in Settings > Display |
-| 5 | `feat/map-geometry`             | ⏳     | TrenchBroom game configuration, `.map` parser, brushes → polygons (plane intersection), Z-up → Y-up; asset lifetime groups (global and level); solid and wireframe render modes, map statistics |
-| 6 | `feat/brush-textures`           | ⏳     | Texture coordinates from the Valve 220 format, drawing grouped by texture |
-| 7 | `feat/collision`                | ⏳     | Axis-aligned box traced against brushes (Quake-style), debug drawing of boxes and traces |
-| 8 | `feat/player-movement`          | ⏳     | Quake movement: acceleration, friction, jumping, gravity, sliding along walls, stepping up stairs; noclip toggle; speedometer |
+| 5 | `feat/map-geometry`             | ✅     | TrenchBroom game configuration and a test map; `.map` parser (Valve 220); brushes → polygons by clipping with planes; the level as one mesh and one entity, Z-up → Y-up, camera at the player start; solid shaded and wireframe render modes; Renderer window with frame and level statistics; demo crates moved into the test room |
+| 6 | `feat/screen-mode`              | ⏳     | Screen mode in Settings > Display (Windowed, Borderless, Fullscreen); Escape quits the game (an input action); a smaller default window |
+| 7 | `feat/brush-textures`           | ⏳     | Texture coordinates from the Valve 220 format, drawing grouped by texture; generated wall and floor textures; crates become brushes of the test map and the demo crates are removed; asset lifetime groups (global and level) |
+| 8 | `feat/collision`                | ⏳     | Axis-aligned box traced against brushes (Quake-style), debug drawing of boxes and traces |
+| 9 | `feat/player-movement`          | ⏳     | Quake movement: acceleration, friction, jumping, gravity, sliding along walls, stepping up stairs; noclip toggle; speedometer |
 
 **Done when:** a level made in TrenchBroom loads with textures, the player
 walks, runs and jumps on it and collides with its walls, movement behaves the
@@ -84,17 +85,24 @@ far:
 - **0.2** — decide collision approach: own AABB-vs-brush collision with a BVH;
   Jolt Physics only for queries if it becomes necessary. Learn TrenchBroom:
   game configuration, entity definitions, `.map` format, Z-up → Y-up.
-  Asset lifetime groups (global and per-level) come with the first level
-  (branch 5); loading a level clears the entities of the previous one. The
-  free-fly camera becomes a debug noclip mode next to the player camera
-  (branch 8). A search field above the entity list of the inspector once a map
+  Asset lifetime groups (global and per-level) come with the first assets of
+  a level (branch 7); loading a level clears the entities of the previous one.
+  The free-fly camera becomes a debug noclip mode next to the player camera
+  (branch 9). A search field above the entity list of the inspector once a map
   brings hundreds of entities.
 - **0.3** — asset pipeline decision: where models come from (generated,
   downloaded, bought) and how they are imported. Audio via miniaudio.
 - **0.4** — navmesh via Recast/Detour for ground enemies; flying enemies need
-  a separate approach.
+  a separate approach. Frustum culling of entities (a bounding sphere tested
+  against the six planes of the view) once enemies, pickups and effects bring
+  many draw calls; measure first.
 - **0.5** — own lightmap compiler as part of the level compiler; sRGB textures
   and framebuffer (gamma correction) together with lighting; shader hot reload.
+  Visibility of level parts (BSP leaves and PVS, or portals) in the level
+  compiler, if measurements on large maps show that drawing the whole level
+  as one mesh is too slow.
+- **0.6** — pickups spin and bob in place, like in Quake (the `Spin`
+  component of the demo crates lives on there).
 - **0.8** — every gameplay component must be serializable; keep this in mind
   from 0.2 onwards. Options menu, *Display > FPS limit*: a list of common
   monitor refresh rates (30, 60, 75, 90, 100, 120, 144, 165, 180, 240, 280,

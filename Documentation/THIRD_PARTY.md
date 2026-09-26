@@ -32,3 +32,4 @@ Used for building or testing; not part of the shipped game.
 | GoogleTest     | 1.18.0  | BSD-3-Clause | Unit tests (`AbominationTests`) | https://github.com/google/googletest      |
 | vcpkg          | —       | MIT          | C++ package manager             | https://github.com/microsoft/vcpkg        |
 | CMake          | —       | BSD-3-Clause | Build system generator          | https://cmake.org                         |
+| TrenchBroom    | —       | GPL-3.0      | Level editor; the game only reads the `.map` files it saves (see [LEVEL_EDITING.md](LEVEL_EDITING.md)) | https://trenchbroom.github.io |

@@ -9,7 +9,10 @@
 #include "Platform/SDLLibrary.h"
 #include "Platform/Window.h"
 #include "Renderer/RenderAssets.h"
+#include "Renderer/RenderSettings.h"
+#include "Renderer/RenderSystem.h"
 #include "UI/DebugOverlay.h"
+#include "World/LevelMesh.h"
 
 #include <entt/entt.hpp>
 
@@ -20,6 +23,11 @@
 namespace Abomination::Core
 {
     class FrameStatistics;
+}
+
+namespace Abomination::World
+{
+    struct MapData;
 }
 
 namespace Abomination
@@ -37,8 +45,9 @@ namespace Abomination
         [[nodiscard]] int Run();
 
     private:
+        // map: the parsed start map, whose entities the constructor creates.
         Application(Platform::SDLLibrary SDLLibrary, Platform::Window window, Renderer::RenderAssets renderAssets,
-                    UI::DebugOverlay debugOverlay) noexcept;
+                    const World::MapData& map, UI::DebugOverlay debugOverlay);
 
         // The two kinds of updates of the main loop, named like in Unity:
         //   Update()      - once per frame: what must react immediately and does not depend on time
@@ -60,6 +69,15 @@ namespace Abomination
 
         // Every graphics asset of the game, loaded once.
         Renderer::RenderAssets m_renderAssets;
+
+        // Shaders the render system uses on its own (the wireframe), loaded once in the constructor.
+        Renderer::SystemShaders m_systemShaders;
+
+        // How the scene is drawn (changed in the Renderer window of the overlay), what the last frame cost, and the size
+        // of the loaded level (both shown in the same window).
+        Renderer::RenderSettings m_renderSettings;
+        Renderer::RenderStatistics m_renderStatistics;
+        World::LevelMeshStatistics m_levelStatistics;
 
         // All entities of the game and their components. Components hold only handles to assets, never pointers, so they
         // stay valid when Application (and with it m_renderAssets) is moved out of Create().

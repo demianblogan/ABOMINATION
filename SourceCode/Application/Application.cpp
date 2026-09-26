@@ -6,7 +6,7 @@
 #include "Core/Log.h"
 #include "Core/Transform.h"
 #include "Core/TransformInterpolation.h"
-#include "Gameplay/DemoLevel.h"
+#include "Gameplay/DemoCrates.h"
 #include "Gameplay/Spin.h"
 #include "Platform/SystemServices.h"
 #include "Renderer/DebugOutput.h"
@@ -15,6 +15,8 @@
 #include "Renderer/RenderCommands.h"
 #include "Renderer/RenderSystem.h"
 #include "Renderer/View.h"
+#include "World/LevelLoader.h"
+#include "World/MapParser.h"
 
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -31,9 +33,12 @@ namespace Abomination
         // A neutral dark gray, so the colors of the scene are easy to judge.
         constexpr glm::vec4 BackgroundColor{0.12f, 0.12f, 0.13f, 1.0f};
 
-        // The camera starts 6 meters in front of the crates and a little above them (the crates are around the origin,
-        // the camera looks along -Z).
-        constexpr glm::vec3 InitialCameraPosition{0.0f, 1.0f, 6.0f};
+        // The map loaded at start, relative to the assets folder. Also the name its geometry gets in the mesh store.
+        const std::string StartMapPath = "Maps/Test.map";
+
+        // The demo crates stand in the middle of the test room, on its floor (the room spans x from -14 to 2 meters and
+        // z from -2 to 14; the floor is at y = 0).
+        constexpr glm::vec3 DemoCratesCenter{-6.0f, 0.0f, 6.0f};
     }
 
     std::expected<Application, std::string> Application::Create(const std::filesystem::path& assetsDirectory)
@@ -64,27 +69,38 @@ namespace Abomination
             .meshes = Renderer::MeshStore(),
         };
 
+        // The map is only read here; its entities are created in the constructor, where the registry exists.
+        std::expected<World::MapData, std::string> map = World::LoadMapFile(assetsDirectory / StartMapPath);
+        if (!map.has_value())
+            return std::unexpected(map.error());
+
         // The overlay reads its font from the assets and keeps its window settings next to the executable, like the log.
         std::expected<UI::DebugOverlay, std::string> debugOverlay =
             UI::DebugOverlay::Create(*window, assetsDirectory, Platform::GetExecutableDirectory());
         if (!debugOverlay.has_value())
             return std::unexpected(debugOverlay.error());
 
-        return Application(std::move(*SDLLibrary), std::move(*window), std::move(renderAssets),
+        return Application(std::move(*SDLLibrary), std::move(*window), std::move(renderAssets), *map,
                            std::move(*debugOverlay));
     }
 
     Application::Application(Platform::SDLLibrary SDLLibrary, Platform::Window window, Renderer::RenderAssets renderAssets,
-                             UI::DebugOverlay debugOverlay) noexcept
+                             const World::MapData& map, UI::DebugOverlay debugOverlay)
         : m_SDLLibrary(std::move(SDLLibrary))
         , m_window(std::move(window))
         , m_renderAssets(std::move(renderAssets))
         , m_debugOverlay(std::move(debugOverlay))
     {
+        m_systemShaders = Renderer::LoadSystemShaders(m_renderAssets.shaders);
+
         // Entities are created here, not in Create(): the registry is a member, and the handles the components get from
         // m_renderAssets stay valid because they are numbers, not pointers.
-        Gameplay::SpawnDemoLevel(m_registry, m_renderAssets);
-        m_camera = Gameplay::SpawnFreeFlyCamera(m_registry, InitialCameraPosition);
+        const World::LoadedLevel level = World::SpawnLevel(m_registry, m_renderAssets, map, StartMapPath);
+        m_levelStatistics = level.statistics;
+        Gameplay::SpawnDemoCrates(m_registry, m_renderAssets, DemoCratesCenter);
+
+        // The camera starts where the map puts the player, at the height of the player's eyes.
+        m_camera = Gameplay::SpawnFreeFlyCamera(m_registry, level.playerStart.eyePosition, level.playerStart.yaw);
     }
 
     int Application::Run()
@@ -177,6 +193,9 @@ namespace Abomination
         Renderer::SetViewport(widthInPixels, heightInPixels);
         Renderer::ClearFrame(BackgroundColor);
 
+        // Nothing drawn, nothing counted: a minimized window shows zeros in the Renderer window.
+        m_renderStatistics = {};
+
         // A minimized window has a height of 0: there is nothing to draw, and the aspect ratio would divide by zero.
         if (widthInPixels > 0 && heightInPixels > 0)
         {
@@ -190,7 +209,8 @@ namespace Abomination
             const Renderer::View view =
                 Renderer::CalculateView(cameraTransform, m_registry.get<Renderer::CameraLens>(m_camera), aspectRatio);
 
-            Renderer::DrawMeshes(m_registry, view, interpolationFactor, m_renderAssets);
+            m_renderStatistics = Renderer::DrawMeshes(m_registry, view, interpolationFactor, m_renderAssets,
+                                                      m_systemShaders, m_renderSettings);
         }
 
         // The overlay is drawn last, on top of the game.
@@ -201,6 +221,9 @@ namespace Abomination
             .frameLimiter = m_frameLimiter,
             .renderAssets = m_renderAssets,
             .registry = m_registry,
+            .renderSettings = m_renderSettings,
+            .renderStatistics = m_renderStatistics,
+            .levelStatistics = m_levelStatistics,
         });
 
         m_window.SwapBuffers();

@@ -13,8 +13,8 @@ namespace Abomination::Renderer
     // OpenGL how to read them (the layout of MeshVertex). Many objects can draw the same mesh: 50 crates are 50 draws of
     // one mesh, the geometry is stored once. Kept in MeshStore and referred to by MeshHandle. Move-only.
     //
-    // Every shader that draws meshes reads the position at layout(location = 0) and the texture coordinates at
-    // layout(location = 1).
+    // Every shader that draws meshes reads the position at layout(location = 0), the texture coordinates at
+    // layout(location = 1) and the normal at layout(location = 2) (a shader may leave out what it does not need).
     class Mesh
     {
     public:

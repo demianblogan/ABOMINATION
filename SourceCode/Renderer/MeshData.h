@@ -8,14 +8,17 @@
 
 namespace Abomination::Renderer
 {
-    // One vertex as it lies in the vertex buffer: 3 floats of position, then 2 floats of texture coordinates.
-    //   bytes:  0              12         20
-    //           | x | y | z | u | v |
-    // Normals are added with lighting (0.5).
+    // One vertex as it lies in the vertex buffer: position, texture coordinates and normal.
+    //   bytes:  0              12         20             32
+    //           | x | y | z | u | v | nx | ny | nz |
     struct MeshVertex
     {
         glm::vec3 position{0.0f};
         glm::vec2 texCoord{0.0f};
+
+        // The direction the surface faces at this vertex (length 1). Shaders use it to shade surfaces by how they are
+        // turned: the level has no lighting yet (0.5), and without shading its walls and floor would look the same.
+        glm::vec3 normal{0.0f, 1.0f, 0.0f};
     };
 
     // The geometry of a mesh in ordinary memory, before it is uploaded to the GPU: vertices and the indices that make

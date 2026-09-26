@@ -1,0 +1,12 @@
+// Entity definitions of Abomination for TrenchBroom: the entities that can be placed on a map, their size and color
+// in the editor, and their properties. Sizes are in Quake units (32 units are about 1 meter in the game).
+
+// The world: all static brushes of the level (walls, floors, ceilings) belong to it. Every map has exactly one.
+@SolidClass = worldspawn : "World entity" []
+
+// Where the player appears when the map starts. The box has the size of the Quake player: 32 x 32 units wide,
+// 56 units tall, with the origin 24 units above its bottom.
+@PointClass size(-16 -16 -24, 16 16 32) color(0 255 0) = info_player_start : "Player start"
+[
+    angle(integer) : "Direction the player looks, in degrees around the vertical axis" : 0
+]

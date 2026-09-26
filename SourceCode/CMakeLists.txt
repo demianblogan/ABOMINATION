@@ -47,8 +47,6 @@ set(LIBRARY_SOURCES
     Core/Version.h
     Core/Version.cpp.in
 
-    Gameplay/DemoCrates.h
-    Gameplay/DemoCrates.cpp
     Gameplay/FreeFlyCamera.h
     Gameplay/FreeFlyCameraController.h
     Gameplay/FreeFlyCameraController.cpp

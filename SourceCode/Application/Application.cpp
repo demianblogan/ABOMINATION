@@ -6,7 +6,6 @@
 #include "Core/Log.h"
 #include "Core/Transform.h"
 #include "Core/TransformInterpolation.h"
-#include "Gameplay/DemoCrates.h"
 #include "Gameplay/Spin.h"
 #include "Platform/SystemServices.h"
 #include "Renderer/DebugOutput.h"
@@ -18,7 +17,6 @@
 #include "World/LevelLoader.h"
 #include "World/MapParser.h"
 
-#include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 
 #include <utility>
@@ -33,12 +31,9 @@ namespace Abomination
         // A neutral dark gray, so the colors of the scene are easy to judge.
         constexpr glm::vec4 BackgroundColor{0.12f, 0.12f, 0.13f, 1.0f};
 
-        // The map loaded at start, relative to the assets folder. Also the name its geometry gets in the mesh store.
+        // The map loaded at start, relative to the assets folder. Its meshes are named after it in the mesh store
+        // ("Maps/Test.map#Episode1/Wall_MossyBrick").
         const std::string StartMapPath = "Maps/Test.map";
-
-        // The demo crates stand in the middle of the test room, on its floor (the room spans x from -14 to 2 meters and
-        // z from -2 to 14; the floor is at y = 0).
-        constexpr glm::vec3 DemoCratesCenter{-6.0f, 0.0f, 6.0f};
     }
 
     std::expected<Application, std::string> Application::Create(const std::filesystem::path& assetsDirectory)
@@ -97,7 +92,6 @@ namespace Abomination
         // m_renderAssets stay valid because they are numbers, not pointers.
         const World::LoadedLevel level = World::SpawnLevel(m_registry, m_renderAssets, map, StartMapPath);
         m_levelStatistics = level.statistics;
-        Gameplay::SpawnDemoCrates(m_registry, m_renderAssets, DemoCratesCenter);
 
         // The camera starts where the map puts the player, at the height of the player's eyes.
         m_camera = Gameplay::SpawnFreeFlyCamera(m_registry, level.playerStart.eyePosition, level.playerStart.yaw);

@@ -110,4 +110,9 @@ namespace Abomination::Renderer
     {
         return m_cache.GetCount();
     }
+
+    const std::string* ShaderStore::GetName(ShaderHandle handle) const
+    {
+        return m_cache.GetPath(handle);
+    }
 }

@@ -48,4 +48,9 @@ namespace Abomination::Renderer
     {
         return m_cache.GetCount();
     }
+
+    const std::string* MeshStore::GetName(MeshHandle handle) const
+    {
+        return m_cache.GetPath(handle);
+    }
 }

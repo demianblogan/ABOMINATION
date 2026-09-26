@@ -27,6 +27,11 @@ namespace Abomination::UI
         constexpr std::string_view FontFileName = "Fonts/JetBrainsMonoRegular.ttf";
         constexpr std::string_view SettingsFileName = "DebugOverlay.ini";
 
+        // Height of all overlay text in pixels. Widgets that contain text (buttons, fields, headers, menu items) grow with
+        // it; sizes given in pixels (the graph width, the first size of a window) stay as they are.
+        // The game interface (menus, HUD) will have its own fonts.
+        constexpr float FontSize = 22.0f;
+
         // Distance from the edges of the game window (below the menu bar) to the performance window, in pixels.
         constexpr float PerformanceWindowMargin = 10.0f;
 
@@ -115,7 +120,7 @@ namespace Abomination::UI
     {
         // The order matters: the context first, then the backends that register themselves in it.
         std::expected<ImGuiLibrary, std::string> library =
-            ImGuiLibrary::Initialize(assetsDirectory / FontFileName, settingsDirectory / SettingsFileName);
+            ImGuiLibrary::Initialize(assetsDirectory / FontFileName, FontSize, settingsDirectory / SettingsFileName);
         if (!library.has_value())
             return std::unexpected(library.error());
 
@@ -161,6 +166,9 @@ namespace Abomination::UI
 
             if (m_isAssetsWindowOpen)
                 DrawAssetsWindow(context);
+
+            if (m_isEntitiesWindowOpen)
+                m_entitiesWindow.Draw(&m_isEntitiesWindowOpen, context.registry, context.renderAssets);
         }
 
         // 3. ImGui turns the recorded windows into lists of triangles, and the OpenGL backend draws them.
@@ -193,6 +201,7 @@ namespace Abomination::UI
             // MenuItem(label, shortcut, bool*) shows a check mark and flips the bool when clicked.
             ImGui::MenuItem("Performance", nullptr, &m_isPerformanceWindowOpen);
             ImGui::MenuItem("Assets", nullptr, &m_isAssetsWindowOpen);
+            ImGui::MenuItem("Entities", nullptr, &m_isEntitiesWindowOpen);
             ImGui::EndMenu();
         }
 

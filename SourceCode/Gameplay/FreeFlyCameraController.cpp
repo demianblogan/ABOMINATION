@@ -1,5 +1,6 @@
 #include "Gameplay/FreeFlyCameraController.h"
 
+#include "Core/Name.h"
 #include "Core/Transform.h"
 #include "Core/TransformInterpolation.h"
 #include "Input/ActionStates.h"
@@ -43,6 +44,7 @@ namespace Abomination::Gameplay
     entt::entity SpawnFreeFlyCamera(entt::registry& registry, glm::vec3 position)
     {
         const entt::entity camera = registry.create();
+        registry.emplace<Core::Name>(camera, "Camera");
         registry.emplace<Core::Transform>(camera, Core::Transform{.position = position});
         registry.emplace<Renderer::CameraLens>(camera);
         registry.emplace<FreeFlyCamera>(camera);

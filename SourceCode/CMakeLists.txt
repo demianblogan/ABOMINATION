@@ -35,6 +35,7 @@ set(LIBRARY_SOURCES
     Core/Image.cpp
     Core/Log.h
     Core/Log.cpp
+    Core/Name.h
     Core/Transform.h
     Core/Transform.cpp
     Core/TransformInterpolation.h
@@ -107,6 +108,8 @@ set(LIBRARY_SOURCES
 
     UI/DebugOverlay.h
     UI/DebugOverlay.cpp
+    UI/EntitiesWindow.h
+    UI/EntitiesWindow.cpp
     UI/ImGuiLibrary.h
     UI/ImGuiLibrary.cpp
 )

@@ -1,6 +1,9 @@
 #include <entt/entt.hpp>
 #include <gtest/gtest.h>
 
+#include <algorithm>
+#include <vector>
+
 // Checks that EnTT compiles with the project settings (C++23, /permissive-, /W4 /WX) and behaves as the game expects.
 // The game code itself is tested in the Gameplay and Renderer tests once it uses EnTT.
 namespace Abomination
@@ -46,5 +49,24 @@ namespace Abomination
 
         // Like our AssetHandle: the entity number holds a version, so a destroyed entity is recognized.
         EXPECT_FALSE(registry.valid(entity));
+    }
+
+    TEST(EnTT, EntityViewVisitsAllLivingEntities)
+    {
+        entt::registry registry;
+        const entt::entity first = registry.create();
+        const entt::entity destroyed = registry.create();
+        const entt::entity last = registry.create();
+        registry.destroy(destroyed);
+
+        // view<entt::entity>() visits every entity that exists, whatever components it has (the entity inspector
+        // lists entities this way); destroyed ones are skipped.
+        std::vector<entt::entity> visited;
+        for (const entt::entity entity : registry.view<entt::entity>())
+            visited.push_back(entity);
+
+        EXPECT_EQ(visited.size(), 2u);
+        EXPECT_NE(std::ranges::find(visited, first), visited.end());
+        EXPECT_NE(std::ranges::find(visited, last), visited.end());
     }
 }

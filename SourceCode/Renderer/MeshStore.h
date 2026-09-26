@@ -39,6 +39,9 @@ namespace Abomination::Renderer
         template <typename Visitor>
         void VisitMeshes(Visitor&& visitor) const;
 
+        // The name the mesh was added with, or nullptr for an invalid handle. For the entity inspector.
+        [[nodiscard]] const std::string* GetName(MeshHandle handle) const;
+
         [[nodiscard]] std::size_t GetCount() const noexcept;
 
     private:

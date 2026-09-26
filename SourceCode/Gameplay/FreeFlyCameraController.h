@@ -42,7 +42,7 @@ namespace Abomination::Gameplay
     // world +Y. Applied to the camera's forward (0, 0, -1), it gives the direction the camera looks in.
     [[nodiscard]] glm::quat CalculateCameraRotation(float yaw, float pitch);
 
-    // Creates a free-fly camera entity at position, looking along -Z: Transform, PreviousTransform (it moves in ticks,
+    // Creates a free-fly camera entity at position, looking along -Z: Name, Transform, PreviousTransform (it moves in ticks,
     // so it is interpolated), Renderer::CameraLens and FreeFlyCamera.
     entt::entity SpawnFreeFlyCamera(entt::registry& registry, glm::vec3 position);
 

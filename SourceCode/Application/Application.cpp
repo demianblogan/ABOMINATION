@@ -200,6 +200,7 @@ namespace Abomination
             .window = m_window,
             .frameLimiter = m_frameLimiter,
             .renderAssets = m_renderAssets,
+            .registry = m_registry,
         });
 
         m_window.SwapBuffers();

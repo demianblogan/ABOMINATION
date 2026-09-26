@@ -14,20 +14,17 @@ namespace Abomination::UI
 
     namespace
     {
-        // Height of the debug overlay text in pixels. The game interface (menus, HUD) will have its own fonts.
-        constexpr float DebugUIFontSize = 18.0f;
-
         // Adds the font ImGui draws all its text with. The first font added becomes the default one, so this must be
         // done before the first frame. A missing or broken font file is not fatal for a debug tool: the built-in
         // vector font is used instead, and a warning goes to the log.
-        void AddDebugUIFont(const std::filesystem::path& fontPath)
+        void AddDebugUIFont(const std::filesystem::path& fontPath, float fontSize)
         {
             ImFontAtlas* fonts = ImGui::GetIO().Fonts;
 
             // AddFontFromFileTTF stops the program with an assertion if the file does not exist, so check first.
             if (std::filesystem::exists(fontPath))
             {
-                if (fonts->AddFontFromFileTTF(fontPath.string().c_str(), DebugUIFontSize) != nullptr)
+                if (fonts->AddFontFromFileTTF(fontPath.string().c_str(), fontSize) != nullptr)
                     return;
             }
 
@@ -39,7 +36,7 @@ namespace Abomination::UI
         }
     }
 
-    std::expected<ImGuiLibrary, std::string> ImGuiLibrary::Initialize(const std::filesystem::path& fontPath,
+    std::expected<ImGuiLibrary, std::string> ImGuiLibrary::Initialize(const std::filesystem::path& fontPath, float fontSize,
                                                                      std::filesystem::path settingsPath)
     {
         // Checks that the ImGui headers we compile with match the compiled ImGui library.
@@ -56,8 +53,8 @@ namespace Abomination::UI
         if (std::filesystem::exists(settingsPath))
             ImGui::LoadIniSettingsFromDisk(settingsPath.string().c_str());
 
-        AddDebugUIFont(fontPath);
-        ImGui::GetStyle().FontSizeBase = DebugUIFontSize;
+        AddDebugUIFont(fontPath, fontSize);
+        ImGui::GetStyle().FontSizeBase = fontSize;
 
         ImGui::StyleColorsDark();
 

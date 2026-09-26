@@ -49,7 +49,8 @@ abomination_install_vcpkg_license(sdl3 SDL3)
 abomination_install_vcpkg_license(spdlog spdlog)
 abomination_install_vcpkg_license(stb stb)
 
-# GLAD does not come from vcpkg; its license file is kept next to the generated files.
+# EnTT and GLAD do not come from vcpkg; their license files are kept next to their code in ThirdParty/.
+install(FILES ${PROJECT_SOURCE_DIR}/ThirdParty/EnTT/LICENSE DESTINATION Licenses RENAME EnTT.txt)
 install(FILES ${PROJECT_SOURCE_DIR}/ThirdParty/GLAD/LICENSE DESTINATION Licenses RENAME GLAD.txt)
 
 # The font license stays in Assets/Fonts/ next to the font itself, as the font license asks.

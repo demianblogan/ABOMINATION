@@ -27,6 +27,11 @@ namespace Abomination::UI
         constexpr std::string_view FontFileName = "Fonts/JetBrainsMonoRegular.ttf";
         constexpr std::string_view SettingsFileName = "DebugOverlay.ini";
 
+        // Height of all overlay text in pixels. Widgets that contain text (buttons, fields, headers, menu items) grow with
+        // it; sizes given in pixels (the graph width, the first size of a window) stay as they are.
+        // The game interface (menus, HUD) will have its own fonts.
+        constexpr float FontSize = 22.0f;
+
         // Distance from the edges of the game window (below the menu bar) to the performance window, in pixels.
         constexpr float PerformanceWindowMargin = 10.0f;
 
@@ -115,7 +120,7 @@ namespace Abomination::UI
     {
         // The order matters: the context first, then the backends that register themselves in it.
         std::expected<ImGuiLibrary, std::string> library =
-            ImGuiLibrary::Initialize(assetsDirectory / FontFileName, settingsDirectory / SettingsFileName);
+            ImGuiLibrary::Initialize(assetsDirectory / FontFileName, FontSize, settingsDirectory / SettingsFileName);
         if (!library.has_value())
             return std::unexpected(library.error());
 
@@ -161,6 +166,9 @@ namespace Abomination::UI
 
             if (m_isAssetsWindowOpen)
                 DrawAssetsWindow(context);
+
+            if (m_isEntitiesWindowOpen)
+                m_entitiesWindow.Draw(&m_isEntitiesWindowOpen, context.registry, context.renderAssets);
         }
 
         // 3. ImGui turns the recorded windows into lists of triangles, and the OpenGL backend draws them.
@@ -193,6 +201,7 @@ namespace Abomination::UI
             // MenuItem(label, shortcut, bool*) shows a check mark and flips the bool when clicked.
             ImGui::MenuItem("Performance", nullptr, &m_isPerformanceWindowOpen);
             ImGui::MenuItem("Assets", nullptr, &m_isAssetsWindowOpen);
+            ImGui::MenuItem("Entities", nullptr, &m_isEntitiesWindowOpen);
             ImGui::EndMenu();
         }
 
@@ -347,6 +356,44 @@ namespace Abomination::UI
 
                         ImGui::TableNextColumn();
                         DrawAssetStatus(isFallback);
+                    });
+
+                    ImGui::EndTable();
+                }
+            }
+
+            std::size_t totalMeshMemory = 0;
+            assets.meshes.VisitMeshes([&](const std::string&, const Renderer::Mesh& mesh)
+            {
+                totalMeshMemory += mesh.GetVideoMemorySize();
+            });
+
+            const std::string meshesHeader = std::format("Meshes: {}, {} of video memory###Meshes", assets.meshes.GetCount(),
+                                                         FormatByteSize(totalMeshMemory));
+            if (ImGui::CollapsingHeader(meshesHeader.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                if (ImGui::BeginTable("MeshTable", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders))
+                {
+                    ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch);
+                    ImGui::TableSetupColumn("Vertices", ImGuiTableColumnFlags_WidthFixed);
+                    ImGui::TableSetupColumn("Triangles", ImGuiTableColumnFlags_WidthFixed);
+                    ImGui::TableSetupColumn("Video memory", ImGuiTableColumnFlags_WidthFixed);
+                    ImGui::TableHeadersRow();
+
+                    assets.meshes.VisitMeshes([](const std::string& name, const Renderer::Mesh& mesh)
+                    {
+                        ImGui::TableNextColumn();
+                        ImGui::TextUnformatted(name.c_str());
+
+                        ImGui::TableNextColumn();
+                        ImGui::TextUnformatted(std::format("{}", mesh.GetVertexCount()).c_str());
+
+                        // Every 3 indices are one triangle.
+                        ImGui::TableNextColumn();
+                        ImGui::TextUnformatted(std::format("{}", mesh.GetIndexCount() / 3).c_str());
+
+                        ImGui::TableNextColumn();
+                        ImGui::TextUnformatted(FormatByteSize(mesh.GetVideoMemorySize()).c_str());
                     });
 
                     ImGui::EndTable();

@@ -39,6 +39,9 @@ namespace Abomination::Renderer
         template <typename Visitor>
         void VisitTextures(Visitor&& visitor) const;
 
+        // The path the texture was loaded from, or nullptr for an invalid handle. For the entity inspector.
+        [[nodiscard]] const std::string* GetPath(TextureHandle handle) const;
+
         [[nodiscard]] std::size_t GetCount() const noexcept;
 
     private:

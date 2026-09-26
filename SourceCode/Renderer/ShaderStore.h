@@ -43,6 +43,9 @@ namespace Abomination::Renderer
         template <typename Visitor>
         void VisitPrograms(Visitor&& visitor) const;
 
+        // The name the program was loaded with, or nullptr for an invalid handle. For the entity inspector.
+        [[nodiscard]] const std::string* GetName(ShaderHandle handle) const;
+
         [[nodiscard]] std::size_t GetCount() const noexcept;
 
     private:

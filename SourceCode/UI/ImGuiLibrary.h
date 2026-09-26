@@ -13,8 +13,10 @@ namespace Abomination::UI
     {
     public:
         // fontPath: the TTF font for all ImGui text. If the file is missing, the built-in font is used instead.
+        // fontSize: the height of the text in pixels.
         // settingsPath: the file where ImGui remembers the position, size and state of its windows between runs.
         [[nodiscard]] static std::expected<ImGuiLibrary, std::string> Initialize(const std::filesystem::path& fontPath,
+                                                                                 float fontSize,
                                                                                  std::filesystem::path settingsPath);
 
         ImGuiLibrary(const ImGuiLibrary&) = delete;

@@ -35,11 +35,21 @@ set(LIBRARY_SOURCES
     Core/Image.cpp
     Core/Log.h
     Core/Log.cpp
+    Core/Name.h
+    Core/Transform.h
+    Core/Transform.cpp
+    Core/TransformInterpolation.h
+    Core/TransformInterpolation.cpp
     Core/Version.h
     Core/Version.cpp.in
 
+    Gameplay/DemoLevel.h
+    Gameplay/DemoLevel.cpp
+    Gameplay/FreeFlyCamera.h
     Gameplay/FreeFlyCameraController.h
     Gameplay/FreeFlyCameraController.cpp
+    Gameplay/Spin.h
+    Gameplay/Spin.cpp
 
     Input/Action.h
     Input/ActionStates.h
@@ -61,12 +71,9 @@ set(LIBRARY_SOURCES
     Platform/Window.h
     Platform/Window.cpp
 
-    Renderer/Camera.h
-    Renderer/Camera.cpp
+    Renderer/CameraLens.h
     Renderer/DebugOutput.h
     Renderer/DebugOutput.cpp
-    Renderer/DemoScene.h
-    Renderer/DemoScene.cpp
     Renderer/GLBuffer.h
     Renderer/GLBuffer.cpp
     Renderer/GLShaderProgram.h
@@ -77,18 +84,32 @@ set(LIBRARY_SOURCES
     Renderer/GLVertexArray.cpp
     Renderer/ImGuiRendererBackend.h
     Renderer/ImGuiRendererBackend.cpp
+    Renderer/Mesh.h
+    Renderer/Mesh.cpp
+    Renderer/MeshData.h
+    Renderer/MeshPrimitives.h
+    Renderer/MeshPrimitives.cpp
+    Renderer/MeshRenderer.h
+    Renderer/MeshStore.h
+    Renderer/MeshStore.cpp
     Renderer/OpenGLLoader.h
     Renderer/OpenGLLoader.cpp
     Renderer/RenderAssets.h
     Renderer/RenderCommands.h
     Renderer/RenderCommands.cpp
+    Renderer/RenderSystem.h
+    Renderer/RenderSystem.cpp
     Renderer/ShaderStore.h
     Renderer/ShaderStore.cpp
     Renderer/TextureStore.h
     Renderer/TextureStore.cpp
+    Renderer/View.h
+    Renderer/View.cpp
 
     UI/DebugOverlay.h
     UI/DebugOverlay.cpp
+    UI/EntitiesWindow.h
+    UI/EntitiesWindow.cpp
     UI/ImGuiLibrary.h
     UI/ImGuiLibrary.cpp
 )
@@ -101,6 +122,7 @@ target_include_directories(AbominationCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(AbominationCore SYSTEM PRIVATE ${Stb_INCLUDE_DIR})  # Only Core/Image.cpp includes stb
 target_link_libraries(AbominationCore
     PUBLIC
+        EnTT                  # Header-only; game headers will hold entt::registry and entities, so it is public
         glm::glm-header-only  # Renderer headers use glm types, so everyone who uses the library needs glm too
     PRIVATE
         GLAD                  # Only Renderer/*.cpp include GLAD, no header does

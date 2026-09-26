@@ -65,11 +65,12 @@ seen (collision, map geometry) get debug visualizations in the overlay.
 |---|---------------------------------|--------|-------------------------------------------------------------------------|
 | 1 | `feat/fixed-timestep`           | ✅     | Debug menu bar (View, Settings > Display), V-Sync toggle, FPS limit; fixed 60 Hz simulation ticks with interpolation; main loop split into `Update`, `FixedUpdate`, `Render` |
 | 2 | `feat/asset-manager`            | ✅     | Typed asset handles and a generic cache, texture and shader stores with magenta fallbacks, `RenderAssets`; Assets window in the overlay, debug windows remember their positions; crate texture on the cube |
-| 3 | `feat/ecs-scene`                | ⏳     | EnTT: entities with transform and mesh, render system, camera as a component, interpolation as a system; `DemoScene` removed; entity inspector |
-| 4 | `feat/map-geometry`             | ⏳     | TrenchBroom game configuration, `.map` parser, brushes → polygons (plane intersection), Z-up → Y-up; asset lifetime groups (global and level); solid and wireframe render modes, map statistics |
-| 5 | `feat/brush-textures`           | ⏳     | Texture coordinates from the Valve 220 format, drawing grouped by texture |
-| 6 | `feat/collision`                | ⏳     | Axis-aligned box traced against brushes (Quake-style), debug drawing of boxes and traces |
-| 7 | `feat/player-movement`          | ⏳     | Quake movement: acceleration, friction, jumping, gravity, sliding along walls, stepping up stairs; noclip toggle; speedometer |
+| 3 | `feat/ecs-scene`                | ✅     | EnTT 4.0.0; `Mesh` asset and mesh store; crates as entities (`Transform`, `MeshRenderer`, `Spin`), render system; interpolation as a system for every moving entity; the camera as an entity, the renderer gets a `View`; entity inspector with module colors; `DemoScene` removed |
+| 4 | `feat/debug-ui-scaling`         | ⏳     | Debug overlay follows the display scale of Windows (DPI) for 4K monitors, plus a manual UI scale in Settings > Display |
+| 5 | `feat/map-geometry`             | ⏳     | TrenchBroom game configuration, `.map` parser, brushes → polygons (plane intersection), Z-up → Y-up; asset lifetime groups (global and level); solid and wireframe render modes, map statistics |
+| 6 | `feat/brush-textures`           | ⏳     | Texture coordinates from the Valve 220 format, drawing grouped by texture |
+| 7 | `feat/collision`                | ⏳     | Axis-aligned box traced against brushes (Quake-style), debug drawing of boxes and traces |
+| 8 | `feat/player-movement`          | ⏳     | Quake movement: acceleration, friction, jumping, gravity, sliding along walls, stepping up stairs; noclip toggle; speedometer |
 
 **Done when:** a level made in TrenchBroom loads with textures, the player
 walks, runs and jumps on it and collides with its walls, movement behaves the
@@ -84,11 +85,10 @@ far:
   Jolt Physics only for queries if it becomes necessary. Learn TrenchBroom:
   game configuration, entity definitions, `.map` format, Z-up → Y-up.
   Asset lifetime groups (global and per-level) come with the first level
-  (branch 4). `DemoScene` is replaced by entities with a mesh component and a
-  render system; its cube geometry becomes the `Mesh` asset, and the renderer
-  may take over `RenderAssets`. The camera becomes an ECS component and
-  the renderer receives only a `View` (see ARCHITECTURE.md, section 8); the
-  free-fly controller becomes a debug noclip mode next to the player camera.
+  (branch 5); loading a level clears the entities of the previous one. The
+  free-fly camera becomes a debug noclip mode next to the player camera
+  (branch 8). A search field above the entity list of the inspector once a map
+  brings hundreds of entities.
 - **0.3** — asset pipeline decision: where models come from (generated,
   downloaded, bought) and how they are imported. Audio via miniaudio.
 - **0.4** — navmesh via Recast/Detour for ground enemies; flying enemies need
@@ -117,3 +117,9 @@ Ideas that are not assigned to a milestone yet.
 - **In-game log viewer**: a third log sink keeping recent messages in memory,
   shown in the debug overlay with filters by level and category (useful in
   Release builds without a console window).
+- **Entity inspector growth**: filter the list by component ("only enemies"),
+  a hierarchy once entities have parents (a weapon attached to the player),
+  and a "save values to file" button once parameters live in JSON (0.6), so
+  numbers tuned in the running game become the game's settings.
+- **"Reset window positions"** in the View menu, for debug windows saved
+  outside a smaller game window.

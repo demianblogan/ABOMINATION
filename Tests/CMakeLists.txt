@@ -11,17 +11,23 @@ set(TEST_SOURCES
     Core/FrameTimerTests.cpp
     Core/ImageTests.cpp
     Core/LogTests.cpp
+    Core/TransformTests.cpp
+    Core/TransformInterpolationTests.cpp
     Core/VersionTests.cpp
 
     Gameplay/FreeFlyCameraControllerTests.cpp
+    Gameplay/SpinTests.cpp
 
     Input/ActionStatesTests.cpp
     Input/InputBindingsTests.cpp
     Input/KeyboardTests.cpp
     Input/MouseTests.cpp
 
-    Renderer/CameraTests.cpp
     Renderer/GLTextureTests.cpp
+    Renderer/MeshPrimitivesTests.cpp
+    Renderer/ViewTests.cpp
+
+    ThirdParty/EnTTTests.cpp
 )
 
 add_executable(AbominationTests

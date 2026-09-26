@@ -89,4 +89,9 @@ namespace Abomination::Renderer
     {
         return m_cache.GetCount();
     }
+
+    const std::string* TextureStore::GetPath(TextureHandle handle) const
+    {
+        return m_cache.GetPath(handle);
+    }
 }

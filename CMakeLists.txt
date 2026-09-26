@@ -24,6 +24,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Binaries)
 include(CMake/CompilerOptions.cmake)
 
 # --- Targets -----------------------------------------------------------------
+add_subdirectory(ThirdParty/EnTT)
 add_subdirectory(ThirdParty/GLAD)
 add_subdirectory(SourceCode)
 

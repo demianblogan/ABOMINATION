@@ -43,6 +43,10 @@ namespace Abomination::Core
 
         [[nodiscard]] bool IsValid(AssetHandle<Asset> handle) const;
 
+        // The path the asset was added with, or nullptr if the handle is invalid. For tools that show which asset a
+        // component refers to. Valid until the next Add() or Remove(), like Get().
+        [[nodiscard]] const std::string* GetPath(AssetHandle<Asset> handle) const;
+
         // How many assets are stored.
         [[nodiscard]] std::size_t GetCount() const noexcept;
 
@@ -187,6 +191,15 @@ namespace Abomination::Core
         const Slot& slot = m_slots[handle.index];
 
         return slot.generation == handle.generation && slot.asset.has_value();
+    }
+
+    template <typename Asset>
+    const std::string* AssetCache<Asset>::GetPath(AssetHandle<Asset> handle) const
+    {
+        if (!IsValid(handle))
+            return nullptr;
+
+        return &m_slots[handle.index].path;
     }
 
     template <typename Asset>

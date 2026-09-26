@@ -89,6 +89,9 @@ found during review.
   functions called by a template) go into a nested `Internal` namespace and
   are not called from outside the module. Details that do not need to be in a
   header live in an anonymous namespace in the `.cpp`.
+- ECS components are named with a noun, without a `Component` suffix
+  (`Transform`, `Spin`); systems are functions named by what they do
+  (`UpdateSpinningEntities`, `DrawMeshes`). See ARCHITECTURE.md, section 10.
 
 ## 4. Formatting
 
@@ -244,6 +247,10 @@ Order, separated by a blank line (clang-format sorts inside groups):
 - World space is **right-handed, Y-up**, −Z is forward — the OpenGL/glm
   convention. Data from other conventions (TrenchBroom is Z-up) is converted
   once, at load time.
+- Direction constants say which space they are in: `World…` is an axis of the
+  world (`WorldUp`), `Local…` a direction in an object's own coordinates
+  (`LocalForward` = (0, 0, −1)), which is turned by the object's rotation to get
+  its direction in the world.
 
 ## 9. GLSL
 

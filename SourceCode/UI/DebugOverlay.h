@@ -3,7 +3,10 @@
 #include "Core/BuildConfiguration.h"
 #include "Platform/ImGuiPlatformBackend.h"
 #include "Renderer/ImGuiRendererBackend.h"
+#include "UI/EntitiesWindow.h"
 #include "UI/ImGuiLibrary.h"
+
+#include <entt/entt.hpp>
 
 #include <expected>
 #include <filesystem>
@@ -38,6 +41,7 @@ namespace Abomination::UI
         Platform::Window& window;
         Core::FrameLimiter& frameLimiter;
         const Renderer::RenderAssets& renderAssets;
+        entt::registry& registry;
     };
 
     // Developer overlay drawn with Dear ImGui on top of the game: a menu bar with debug windows and settings.
@@ -90,5 +94,8 @@ namespace Abomination::UI
         // Which debug windows are open. Changed by the View menu and by the close button of each window.
         bool m_isPerformanceWindowOpen = true;
         bool m_isAssetsWindowOpen = false;
+        bool m_isEntitiesWindowOpen = false;
+
+        EntitiesWindow m_entitiesWindow;
     };
 }
